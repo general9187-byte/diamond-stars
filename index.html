@@ -30,7 +30,7 @@ button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
 #info{right:max(8px,env(safe-area-inset-right));top:6px;background:#0b1e3acc;border:2px solid #f2c14e88;border-radius:10px;padding:5px 9px;font-size:11px;max-width:44vw;text-align:right;line-height:1.5}
 #info b{color:var(--gold);font-size:13px}
 #banner{left:0;right:0;top:34%;text-align:center;font-size:clamp(26px,7vmin,52px);-webkit-text-stroke:2px #000;paint-order:stroke fill;text-shadow:0 4px 0 #000;opacity:0;letter-spacing:.05em}
-#banner.show{animation:bn 1.9s ease-out forwards}
+#banner.show{animation:bn calc(1.9s / var(--spd,1)) ease-out forwards}
 @keyframes bn{0%{opacity:0;transform:scale(2)}12%{opacity:1;transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-12px)}}
 #toast{left:0;right:0;bottom:28%;text-align:center;font-size:14px;opacity:0;transition:opacity .3s}
 #toast.on{opacity:1}
@@ -89,7 +89,7 @@ button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
 .slot{background:#0b1e3a;border:2px dashed #fff6;border-radius:8px;padding:4px 8px;margin:3px 0;text-align:left;font-size:12px;width:min(94vw,420px)}
 .slot.sel{border-color:var(--gold);background:#1d3a6a}
 .stages{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;width:min(94vw,680px)}
-.stage{background:#17315c;border:3px solid #fff8;border-radius:10px;padding:8px;text-align:left;font-size:12px;position:relative}
+.stage .btn{padding:3px 8px;font-size:11px;margin:4px 3px 0 0}.stage{background:#17315c;border:3px solid #fff8;border-radius:10px;padding:8px;text-align:left;font-size:12px;position:relative}
 .stage.lock{opacity:.45}.stage.clear{border-color:var(--gold)}.stage .star{color:var(--gold)}
 input.in{width:min(86vw,320px);padding:10px;font-size:26px;text-align:center;letter-spacing:.25em;text-transform:uppercase;background:#0008;color:var(--gold);border:3px solid #fff;border-radius:10px;font-family:monospace;-webkit-user-select:text;user-select:text}
 .code{font-size:46px;letter-spacing:.2em;color:var(--gold);text-shadow:0 3px 0 #000;font-family:monospace}
@@ -108,7 +108,7 @@ input.in{width:min(86vw,320px);padding:10px;font-size:26px;text-align:center;let
 #vs .ab{display:inline-block;margin:2px 3px 0 0}.vl.r div{text-align:right}
 .cutin{position:fixed;left:0;right:0;top:30%;z-index:7;pointer-events:none;opacity:0;transform:translateX(-110%) skewX(-12deg)}
 .cutin.p{transform:translateX(110%) skewX(-12deg)}
-.cutin.go{animation:cin 1.05s cubic-bezier(.2,.9,.2,1) forwards}.cutin.big.go{animation:cin 1.5s cubic-bezier(.2,.9,.2,1) forwards}
+.cutin.go{animation:cin calc(1.05s / var(--spd,1)) cubic-bezier(.2,.9,.2,1) forwards}.cutin.big.go{animation:cin calc(1.5s / var(--spd,1)) cubic-bezier(.2,.9,.2,1) forwards}
 @keyframes cin{0%{opacity:0;transform:translateX(-110%) skewX(-12deg)}15%{opacity:1;transform:translateX(0) skewX(-12deg)}80%{opacity:1;transform:translateX(0) skewX(-12deg)}100%{opacity:0;transform:translateX(30%) skewX(-12deg)}}
 .cutin.p.go{animation-name:cinp}.cutin.big.p.go{animation-name:cinp}
 @keyframes cinp{0%{opacity:0;transform:translateX(110%) skewX(-12deg)}15%{opacity:1;transform:translateX(0) skewX(-12deg)}80%{opacity:1;transform:translateX(0) skewX(-12deg)}100%{opacity:0;transform:translateX(-30%) skewX(-12deg)}}
@@ -116,8 +116,10 @@ input.in{width:min(86vw,320px);padding:10px;font-size:26px;text-align:center;let
 .cutin.p .cband{background:linear-gradient(90deg,#1a4aaacc,#4da3ffdd,#1a4aaacc);box-shadow:0 0 24px #4da3ff}
 .cutin.big .cband{background:linear-gradient(90deg,#6a1ab0cc,#e05affdd,#6a1ab0cc);box-shadow:0 0 34px #e05aff;padding:14px 18px}
 .cband small{display:block;font-size:12px;opacity:.95}.cband b{display:block;font-size:clamp(26px,7vmin,46px);-webkit-text-stroke:2px #000;paint-order:stroke fill;letter-spacing:.08em;text-shadow:0 3px 0 #000a}.cband span{font-size:12px}
-.flash{position:fixed;inset:0;z-index:6;pointer-events:none;opacity:0;background:radial-gradient(circle,#fff,#fff0 70%)}.flash.go{animation:fl .5s ease-out}.flash.big.go{animation:fl .8s ease-out;background:radial-gradient(circle,#fff,#e05aff66 60%,#0000)}
+.flash{position:fixed;inset:0;z-index:6;pointer-events:none;opacity:0;background:radial-gradient(circle,#fff,#fff0 70%)}.flash.go{animation:fl calc(.5s / var(--spd,1)) ease-out}.flash.big.go{animation:fl calc(.8s / var(--spd,1)) ease-out;background:radial-gradient(circle,#fff,#e05aff66 60%,#0000)}
 @keyframes fl{0%{opacity:.85}100%{opacity:0}}
+#bSpd{left:calc(max(8px,env(safe-area-inset-left)) + 56px);bottom:56px;padding:3px 10px;font-size:11px;z-index:4;border-width:2px;background:#2a64c8}
+#bSkip{left:calc(max(8px,env(safe-area-inset-left)) + 118px);bottom:56px;padding:3px 10px;font-size:11px;z-index:4;border-width:2px;background:#8a1820}
 #bQuit{left:max(8px,env(safe-area-inset-left));bottom:56px;padding:3px 10px;font-size:11px;z-index:4;border-width:2px}
 #fieldBtns span{white-space:nowrap}
 @media (orientation:portrait){
@@ -125,7 +127,7 @@ input.in{width:min(86vw,320px);padding:10px;font-size:26px;text-align:center;let
   #fieldBtns .btn{padding:4px 8px;font-size:11px}
   #roleTag{display:none}
   #hintBat{bottom:150px;max-width:62vw}
-  #bQuit{bottom:104px}
+  #bQuit,#bSpd,#bSkip{bottom:104px}
   #pitchTypes{top:46%}
   #runBtns{gap:5px}#runBtns .btn{padding:6px 9px;font-size:12px}
 }
@@ -174,7 +176,9 @@ const rint=(a,b)=>Math.floor(rnd(a,b+1));
 const pick=a=>a[Math.floor(Math.random()*a.length)];
 const randn=()=>{let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(6.2832*v);};
 const sign=v=>v<0?-1:1;
-let TS=1; // テスト用の時間倍率
+let TS=1; // 時間倍率(倍速モード/テスト)
+let SPD=1,_gc=0,_lr=performance.now();
+const NOW=()=>{const r=performance.now();_gc+=(r-_lr)*SPD;_lr=r;return _gc;};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms/TS));
 const D2R=Math.PI/180;
 const hy=(a,b)=>Math.hypot(a,b);
@@ -902,7 +906,7 @@ function updCamera(dt){
 }
 /* ---------- 投球・打撃アニメ ---------- */
 function showPitch(ev){
-  const p=ev.pitch;V.pitch=p;V.pitchStart=performance.now();V.swingShown=false;V.mode='pitching';
+  const p=ev.pitch;V.pitch=p;V.pitchStart=NOW();V.swingShown=false;V.mode='pitching';
   const P=V.pitcher;if(P){const z0=sceneZ(22.6),sd=P.hand==='L'?1:-1,Y0=P.yaw;
     const E=ease,cl=(x)=>clamp(x,0,1);
     tw(.95,k=>{const s=k*.95;let yaw=0,lean=0,hop=0,dz=0,tilt=0;
@@ -914,7 +918,7 @@ function showPitch(ev){
       P.root.position.z=z0-dz*-1;P.root.position.y=hop;P.root.rotation.set(lean,Y0+yaw,tilt);
       P.setPose(s>=.36&&s<.62?'ACTION':'READY');},()=>{P.root.rotation.set(.06,Y0,0);P.root.position.y=0;},.02);}
   // ボール飛行
-  const t0=performance.now();V.bc={type:'pitch',start:t0+REL*1000,p};
+  const t0=NOW();V.bc={type:'pitch',start:t0+REL*1000,p};
   tw(.01,()=>{},()=>{},0);
   if(V.view==='pitch')setCamMode('pitch');else setCamMode('bat');
   V.catcher&&V.catcher.setPose('READY');
@@ -941,7 +945,7 @@ function ballPathAt(path,t){
   return path[path.length-1];
 }
 function showContact(ev){
-  const b=ev.ball;V.contact=ev;V.contactT0=performance.now();V.bc={type:'path',start:V.contactT0,ball:b,cut:null,hold:null,throws:[],cont:true};
+  const b=ev.ball;V.contact=ev;V.contactT0=NOW();V.bc={type:'path',start:V.contactT0,ball:b,cut:null,hold:null,throws:[],cont:true};
   V.mode='ball';camFollowBall=true;if(V.batter&&V.batter.fade)V.batter.fade(1);camMode='high';if(V.catcher)V.catcher.root.visible=true;
   sfx('crack');if(ev.kind==='inplay'&&ev.ev>115)shakeCam(.3);
   if(b.land&&!b.hr)tw(.01,()=>{},()=>dust(b.land.x,b.land.v,3,.7),b.land.t);
@@ -983,7 +987,7 @@ function dust(x,v,n=6,s=1){
 }
 function nearestFielder(x,v,excl){let best=null,bd=1e9;for(const k in V.fielders){const a=V.fielders[k];if(a===excl)continue;const dd=hy(a.x-x,a.v-v);if(dd<bd){bd=dd;best=a;}}return best;}
 function showPlay(ev){
-  const plan=ev.plan;const el=V.bc&&V.bc.type==='path'?(performance.now()-V.bc.start)/1000:0;
+  const plan=ev.plan;const el=V.bc&&V.bc.type==='path'?(NOW()-V.bc.start)/1000:0;
   const od=V.teams[V.off].design;
   V.mode='play';camMode='high';camFollowBall=true;
   const batId=plan.moves.find(m=>m.legs&&m.legs[0].from===0);
@@ -1015,7 +1019,7 @@ function showPlay(ev){
   });
   if(V.bc&&V.bc.type==='path'&&plan.throws.length){V.bc.throws=plan.throws.map(t=>({t0:t.t0,t1:t.t1,from:t.from,to:t.to}));}
   else if(plan.throws.length){
-    let tt0=performance.now();V.bc={type:'path',start:tt0,ball:{path:[{t:0,x:0,y:1,v:0},{t:.01,x:0,y:1,v:0}],landT:0,apex:0},cut:0,hold:{x:0,v:0},holdT:0,throws:plan.throws.map(t=>({t0:t.t0,t1:t.t1,from:t.from,to:t.to})),holdPos:{x:0,v:0}};V.bc.holdT=0;}
+    let tt0=NOW();V.bc={type:'path',start:tt0,ball:{path:[{t:0,x:0,y:1,v:0},{t:.01,x:0,y:1,v:0}],landT:0,apex:0},cut:0,hold:{x:0,v:0},holdT:0,throws:plan.throws.map(t=>({t0:t.t0,t1:t.t1,from:t.from,to:t.to})),holdPos:{x:0,v:0}};V.bc.holdT=0;}
   // 走者: 全力疾走 + スライディング
   for(const m of plan.moves){
     const a=actorForRunner(m.card,od,m.legs[0].from);
@@ -1031,7 +1035,7 @@ function showPlay(ev){
           if(lg.out){tw(.5,()=>{},()=>{killActor(a);V.runners.delete(m.card);},slide?.95:.35);}
           else if(lg.to>=4){tw(.4,()=>{},()=>{killActor(a);V.runners.delete(m.card);},slide?.9:.2);}},delay);}
   }
-  V.playEnd=performance.now()+plan.dur*1000;
+  V.playEnd=NOW()+plan.dur*1000;
 }
 function syncBases(st){
   if(!st||!V.teams)return;const od=V.teams[V.off].design;const ids=new Set();
@@ -1161,9 +1165,9 @@ function askBat(ctx,done){
   UI.meetR=meetRadius(ctx.batter,ctx.risp,false);CT.curCtx=ctx;
   if(ctx.ultAvail){$('bSp').classList.remove('hide');$('bSp').classList.add('ready');}
   CT.fired=false;
-  CT.swing=()=>{if(CT.fired)return;CT.fired=true;clearTimeout(CT.timer);const dt=performance.now()-arrive;
+  CT.swing=()=>{if(CT.fired)return;CT.fired=true;clearTimeout(CT.timer);const dt=NOW()-arrive;
     doSwing();done({swung:true,cu:UI.cursor.u,cw:UI.cursor.w,dt,power:UI.power,ult:CT.armUlt});};
-  CT.timer=setTimeout(()=>{if(CT.fired)return;CT.fired=true;CT.swing=null;done({swung:false,cu:0,cw:0,dt:0,power:false,ult:false});},Math.max(60,arrive-performance.now()+300));
+  CT.timer=setTimeout(()=>{if(CT.fired)return;CT.fired=true;CT.swing=null;done({swung:false,cu:0,cw:0,dt:0,power:false,ult:false});},Math.max(60,(arrive-NOW()+300)/SPD));
   CT.cleanup=()=>{clearTimeout(CT.timer);CT.swing=null;CT.fired=true;};
 }
 $('bSwing').addEventListener('pointerdown',e=>{e.preventDefault();if(CT.swing)CT.swing();});
@@ -1225,6 +1229,7 @@ E.hooks.remote=(peer,role,ctx,ti)=>NET.askPeer(peer,role,ctx,ti);
 /* ---------- イベント処理 ---------- */
 function myView(){const off=myTeamOff();if(!off&&ME.roles.has('pitch'))return 'pitch';return 'bat';}
 function handleEv(ev){
+  if(G.skipping&&ev.e!=='end'&&ev.e!=='start')return;
   switch(ev.e){
     case 'start':
       V.teams=ev.teams;V.names=ev.teams.map(t=>t.name);V.innings=ev.innings;V.runners.clear();buildPark(ev.park);showHUD(true);hideMenu();$('loading').classList.add('hide');
@@ -1262,9 +1267,9 @@ function batUIOffKeep(){} // 投球中も打撃UIは維持
 /* ---------- メインループ ---------- */
 let lastT=performance.now();
 function loop(){
-  requestAnimationFrame(loop);const now=performance.now();const dt=Math.min(.05,(now-lastT)/1000);lastT=now;
+  requestAnimationFrame(loop);const now=performance.now();const dt=Math.min(.05,(now-lastT)/1000)*SPD;lastT=now;
   if(window.NOLOOP)return;
-  updTW(dt);ballUpdate(now);updCamera(dt);
+  updTW(dt);ballUpdate(NOW());updCamera(dt);
   if(camShake>0){camera.position.x+=(Math.random()-.5)*camShake;camera.position.y+=(Math.random()-.5)*camShake;camShake=Math.max(0,camShake-dt*1.5);}
   if(!window.NOREND)renderer.render(scene,camera);drawOverlay();
 }
@@ -1291,7 +1296,7 @@ function showVS(ev){
     ${row('ミート ⇄ 変化',mt,brk)}${row('パワー ⇄ 球速',pw,vel)}${row('走力 ⇄ 制球',sp,ctl)}
     <div class="vadv" style="color:${col}">${txt}</div>`;
   vs.classList.remove('hide');vs.classList.remove('show');void vs.offsetWidth;vs.classList.add('show');
-  clearTimeout(vsT);vsT=setTimeout(()=>vs.classList.add('hide'),1850);
+  clearTimeout(vsT);vsT=setTimeout(()=>vs.classList.add('hide'),1850/SPD);
 }
 /* ---------- 特殊能力 発動演出 ---------- */
 const abQ=[];let abBusy=false;
@@ -1303,8 +1308,8 @@ function runAbil(){
   el.innerHTML=`<div class="cband"><small>${esc(ev.player)}</small><b>${esc(ev.n)}</b><span>${esc(ev.d||'')}</span></div>`;
   el.classList.add('go');fl.className=(ev.big?'flash big':'flash')+' go';
   sfx(ev.big?'good':'good2');if(ev.big)shakeCam(.45);else shakeCam(.15);
-  setTimeout(()=>{el.classList.remove('go');fl.classList.remove('go');},ev.big?1500:1050);
-  setTimeout(runAbil,ev.big?1550:1100);
+  setTimeout(()=>{el.classList.remove('go');fl.classList.remove('go');},(ev.big?1500:1050)/SPD);
+  setTimeout(runAbil,(ev.big?1550:1100)/SPD);
 }
 
 
@@ -1331,10 +1336,15 @@ function money(){return `<span class="tk">🎫${SAVE.tickets}</span> <span class
 async function abortGame(){
   G.over=true;if(CT.abort)CT.abort();for(const p of NET.players){if(p.waiting){const w=p.waiting;p.waiting=null;w.res({swung:false,cu:0,cw:0,dt:0,type:'str',tu:0,tw:0,q:.6});}}
   if(E.S)E.S.over=true;
-  if(G.promise){TS=60;try{await G.promise;}catch(e){}TS=1;}
+  if(G.promise){TS=60;try{await G.promise;}catch(e){}TS=SPD;}
 }
+let spdPref=1;try{spdPref=+localStorage.getItem('dss_spd')||1;}catch(e){}
+function setSpeed(v,save=true){SPD=v;TS=v;document.documentElement.style.setProperty('--spd',v);const b=$('bSpd');if(b)b.textContent='▶ x'+v;if(save){spdPref=v;try{localStorage.setItem('dss_spd',v);}catch(e){}}}
 async function startGame(o){ // o:{mode,teams,innings,park,ctl,lv,cpuRun,stage}
-  await abortGame();
+  await abortGame();G.skipping=false;
+  const online=o.mode==='online'||o.mode==='coop';setSpeed(online?1:spdPref,false);
+  if($('bSpd'))$('bSpd').classList.toggle('hide',online);
+  if($('bSkip'))$('bSkip').classList.toggle('hide',!(o.mode==='cpu'&&SAVE.stars[o.stage]));
   G.id++;const gid=G.id;G.over=false;G.mode=o.mode;G.stage=o.stage??-1;G.innings=o.innings;G.cfg=o;
   E.emit=ev=>{if(gid!==G.id)return;NET.broadcast({t:'ev',ev});handleEv(ev);};
   $('loading').classList.add('hide');
@@ -1368,7 +1378,8 @@ function onGameEnd(ev){
       ${G.mode==='cpu'?`<button class="mbtn" data-a="retry">もう一度</button>`:''}
       <button class="mbtn sub" data-a="title">タイトルへ</button>`);
     bindMenu({next:()=>startCpuStage(G.stage+1,G.innings),retry:()=>startCpuStage(G.stage,G.innings),title:()=>{leaveOnline();title();}});
-  },2600);
+  },G.skipping?200:2600);
+  G.skipping=false;setSpeed(spdPref,false);
 }
 function leaveOnline(){if(NET.guest||NET.host){NET.broadcast({t:'bye'});setTimeout(()=>NET.close(),200);}}
 /* ---------- メニュー共通 ---------- */
@@ -1410,50 +1421,18 @@ function howto(){
 /* ---------- ステージ選択 ---------- */
 function stageSel(){
   M(`<div class="head"><h2>ステージ選択</h2><div>${money()}</div></div>${seg('inSeg',[[3,'3回'],[5,'5回'],[9,'9回']],G.innings||5)}
-  <div class="stages">${STAGES.map((s,i)=>`<button class="stage ${i>SAVE.cleared?'lock':''} ${SAVE.stars[i]?'clear':''}" data-a="go" data-i="${i}" ${i>SAVE.cleared?'disabled':''}>
-    <b>${i+1}. ${esc(s.n)}</b><br>${PARK_NAME[s.park]}<br>強さ ${'★'.repeat(Math.min(5,Math.ceil((i+1)/2.4)))}${s.boss?' <span style="color:#ff6a6a">BOSS</span>':''}<br>${SAVE.stars[i]?'<span class="star">CLEAR</span>':i>SAVE.cleared?'🔒':'挑戦!'}</button>`).join('')}</div>
+  <div class="small">クリア済みのステージは「スキップ」でバトルを省略して報酬をもらえます。</div>
+  <div class="stages">${STAGES.map((s,i)=>`<div class="stage ${i>SAVE.cleared?'lock':''} ${SAVE.stars[i]?'clear':''}">
+    <b>${i+1}. ${esc(s.n)}</b><br>${PARK_NAME[s.park]}<br>強さ ${'★'.repeat(Math.min(5,Math.ceil((i+1)/2.4)))}${s.boss?' <span style="color:#ff6a6a">BOSS</span>':''}<br>${SAVE.stars[i]?'<span class="star">CLEAR</span>':i>SAVE.cleared?'🔒':'挑戦!'}<br>
+    <button class="btn" data-a="go" data-i="${i}" ${i>SAVE.cleared?'disabled':''}>挑戦</button>${SAVE.stars[i]?`<button class="btn" data-a="skip" data-i="${i}" data-n="1">スキップ</button><button class="btn" data-a="skip" data-i="${i}" data-n="5">×5</button>`:''}</div>`).join('')}</div>
   <button class="mbtn sub" data-a="back">もどる</button>`);
   let inn=G.innings||5;bindSeg('inSeg',v=>{inn=+v;G.innings=inn;});
-  bindMenu({back:title,go:b=>startCpuStage(+b.dataset.i,inn)});
+  bindMenu({back:title,go:b=>startCpuStage(+b.dataset.i,inn),skip:b=>skipStage(+b.dataset.i,+b.dataset.n)});
 }
-
-/* ---------- 選手3Dビューア ---------- */
-const PV={r:null,scene:null,cam:null,model:null,ring:null,el:null,ang:.5,drag:null,pose:'READY',card:null,design:'PRO',raf:0};
-function pvInit(){
-  const r=new THREE.WebGLRenderer({antialias:true,alpha:true});r.setPixelRatio(Math.min(devicePixelRatio,2));r.toneMapping=THREE.ACESFilmicToneMapping;r.shadowMap.enabled=true;r.shadowMap.type=THREE.PCFSoftShadowMap;
-  const sc=new THREE.Scene();sc.environment=new THREE.PMREMGenerator(r).fromScene(new RoomEnvironment(),.04).texture;
-  sc.add(new THREE.HemisphereLight(0xffffff,0x334466,.9));
-  const dl=new THREE.DirectionalLight(0xffffff,2.2);dl.position.set(3,6,4);dl.castShadow=true;dl.shadow.mapSize.set(1024,1024);Object.assign(dl.shadow.camera,{left:-3,right:3,top:3,bottom:-3,near:1,far:20});dl.shadow.bias=-.0005;sc.add(dl);
-  const rim=new THREE.DirectionalLight(0x88b8ff,1.2);rim.position.set(-4,3,-4);sc.add(rim);
-  const fl=new THREE.Mesh(new THREE.CircleGeometry(1.6,40),new THREE.MeshStandardMaterial({color:0x1d2f55,roughness:.8}));fl.rotation.x=-Math.PI/2;fl.receiveShadow=true;sc.add(fl);
-  const ring=new THREE.Mesh(new THREE.RingGeometry(1.45,1.6,48),new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.y=.01;sc.add(ring);
-  Object.assign(PV,{r,scene:sc,ring,cam:new THREE.PerspectiveCamera(30,1,.1,50)});
-  const cv=r.domElement;
-  cv.addEventListener('pointerdown',e=>{PV.drag={x:e.clientX,m:false};try{cv.setPointerCapture(e.pointerId);}catch(_){}});
-  cv.addEventListener('pointermove',e=>{if(!PV.drag)return;const dx=e.clientX-PV.drag.x;if(Math.abs(dx)>2)PV.drag.m=true;PV.ang+=dx*.012;PV.drag.x=e.clientX;});
-  cv.addEventListener('pointerup',()=>{if(PV.drag&&!PV.drag.m)pvPose(PV.pose==='READY'?'ACTION':'READY');PV.drag=null;});
+function skipStage(i,n){const L=i+1;const coins=(120+L*12)*n;SAVE.coins=(SAVE.coins||0)+coins;SAVE.tickets+=n;SAVE.wins+=n;writeSave();
+    M(`<h1 class="logo"><small>SKIP CLEAR</small>スキップ完了!</h1><div class="small">${esc(STAGES[i].n)} を ${n}回スキップ</div><div class="card" style="width:min(86vw,320px);text-align:center;font-size:16px">🪙 ${coins}　🎫 ${n}</div><div>${money()}</div><button class="mbtn gold" data-a="again">もう一度スキップ ×${n}</button><button class="mbtn" data-a="back">ステージ選択へ</button>`);
+    bindMenu({again:()=>skipStage(i,n),back:stageSel});
 }
-function pvPose(p){PV.pose=p;if(PV.model)for(const k in PV.model.poses)PV.model.poses[k].visible=k===p;}
-function pvMount(el,card,design){
-  if(!el||!card)return;if(!PV.r)pvInit();
-  PV.el=el;PV.card=card;PV.design=design;PV.pose='READY';
-  if(PV.model){PV.scene.remove(PV.model.root);PV.model=null;}
-  const base=`${design}_${card.kind==='B'?'BATTER':'PITCHER'}`,root=new THREE.Group(),poses={};
-  for(const p of ['READY','ACTION']){const m=MODELS[`${base}_${p}`];if(!m)continue;const g=m.group.clone();const hand=card.hand==='S'?'R':card.hand;if(hand!==m.hand)g.scale.x*=-1;tintModel(g,card);g.visible=p==='READY';root.add(g);poses[p]=g;}
-  PV.scene.add(root);PV.model={root,poses};
-  PV.ring.material.color.set([0,0x9aa4b8,0x4aa8ff,0xc47aff,0xffd23a][card.rar]);
-  el.innerHTML='';el.appendChild(PV.r.domElement);const sm=document.createElement('small');sm.textContent='ドラッグで回転 / タップでポーズ切替';el.appendChild(sm);
-  pvResize();cancelAnimationFrame(PV.raf);pvLoop();
-}
-function pvResize(){if(!PV.el)return;const w=PV.el.clientWidth||300,h=PV.el.clientHeight||260;PV.r.setSize(w,h,false);PV.cam.aspect=w/h;PV.cam.fov=w/h<.8?44:30;PV.cam.updateProjectionMatrix();}
-function pvLoop(){
-  if(!PV.el||!PV.el.isConnected){return;}
-  PV.raf=requestAnimationFrame(pvLoop);if(!PV.drag)PV.ang+=.008;
-  const m=PV.model.root;m.rotation.y=PV.ang;
-  const t=performance.now()/1000;m.scale.y=1+Math.sin(t*2)*.006;
-  PV.cam.position.set(0,1.45,5.4);PV.cam.lookAt(0,.95,0);PV.r.render(PV.scene,PV.cam);
-}
-addEventListener('resize',()=>{if(PV.el&&PV.el.isConnected)pvResize();});
 /* ---------- ガチャ ---------- */
 function pullOne(minRar=0){
   const r=Math.random();let rar=r<.03?4:r<.17?3:r<.50?2:1;if(rar<minRar)rar=minRar;
@@ -1617,13 +1596,20 @@ function onGuestMsg(m){
   else if(m.t==='room'){}
   else if(m.t==='bye'){NET.guest=false;if(CT.abort)CT.abort();toast('ホストが退出しました',3500);showHUD(false);setTimeout(title,600);}
 }
+/* 倍速 / スキップ */
+(()=>{const s=document.createElement('button');s.className='btn ctl';s.id='bSpd';s.textContent='▶ x1';$('hud').appendChild(s);
+  s.addEventListener('click',()=>{const n=SPD>=3?1:SPD+1;setSpeed(n);sfx('ui');toast(n===1?'通常速度':'倍速モード x'+n,1200);});
+  const k=document.createElement('button');k.className='btn ctl hide';k.id='bSkip';k.textContent='スキップ';$('hud').appendChild(k);
+  k.addEventListener('click',()=>{if(!confirm('クリア済みステージです。残りの試合をオートで消化しますか?'))return;
+    G.skipping=true;batUIOff();if(E.ctl){E.ctl[ME.team]={pitch:{kind:'cpu'},bat:{kind:'cpu'}};E.lv[ME.team]=8;if(E.cfg.cpuRun)E.cfg.cpuRun[ME.team]=true;}
+    TS=40;if(CT.abort)CT.abort();showHUD(false);M('<h1 class="logo"><small>SKIP</small>試合を消化中…</h1>');});})();
 /* 中断ボタン */
 (()=>{const b=document.createElement('button');b.className='btn ctl';b.id='bQuit';b.textContent='中断';$('hud').appendChild(b);
   b.addEventListener('click',async()=>{if(!confirm('試合を中断してタイトルへ戻りますか?'))return;leaveOnline();G.id++;batUIOff();showHUD(false);await abortGame();title();});})();
 /* ---------- 起動 ---------- */
 (async function boot(){
   SAVE=loadSave();if(SAVE.coins===undefined)SAVE.coins=0;writeSave();
-  window.DSS={step:dt=>{updTW(dt);},CAMV,MODELS,STAD,renderer,scene,ME,myTeam,genCpuTeam,opposite,setTS:v=>{TS=v;},camera,camNow,TW,startGame,startCpuStage,handleEv,SAVE:()=>SAVE,V,E,G,CT,UI,title};
+  window.DSS={step:dt=>{updTW(dt);},CAMV,MODELS,STAD,renderer,scene,ME,myTeam,genCpuTeam,opposite,setTS:v=>{TS=v;},setSpeed,camera,camNow,TW,startGame,startCpuStage,handleEv,SAVE:()=>SAVE,V,E,G,CT,UI,title};
   try{await loadAssets();}catch(e){$('loading').innerHTML='<h1 class="logo">読み込みに失敗しました</h1><div class="small">'+esc(e.message||e)+'</div>';return;}
   buildPark(2);loop();$('loading').classList.add('hide');title();
 })();
