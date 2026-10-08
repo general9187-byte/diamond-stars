@@ -99,6 +99,25 @@ input.in{width:min(86vw,320px);padding:10px;font-size:26px;text-align:center;let
 .gachaRes .card{animation:pop .4s ease-out both}
 @keyframes pop{0%{transform:scale(.2) rotate(-15deg);opacity:0}100%{transform:none;opacity:1}}
 #rot{display:none}
+#vs{position:fixed;left:50%;top:22%;transform:translateX(-50%);width:min(94vw,560px);z-index:5;background:linear-gradient(#0b1e3aee,#0b1e3acc);border:3px solid #f2c14e;border-radius:14px;padding:8px 10px;pointer-events:none;text-shadow:0 1px 3px #000}
+#vs.show{animation:vsin .35s ease-out}@keyframes vsin{from{opacity:0;transform:translateX(-50%) scale(.85)}to{opacity:1;transform:translateX(-50%) scale(1)}}
+.vh{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:6px}.vl{flex:1;font-size:12px;line-height:1.4}.vl.r{text-align:right}.vl b{display:block;font-size:16px}.vl small{display:block;font-size:10px;opacity:.9}.vm{font-size:26px;color:#f2c14e;align-self:center;font-style:italic;letter-spacing:.05em}
+.vr{display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center;margin:3px 0;font-size:11px}.vr label{min-width:96px;text-align:center;opacity:.95}
+.vb{height:14px;background:#ffffff1f;border-radius:7px;position:relative;overflow:hidden}.vb i{position:absolute;top:0;bottom:0;border-radius:7px;transition:width .6s}.vb.l i{right:0}.vb.r i{left:0}.vb span{position:absolute;top:-1px;font-size:11px;padding:0 5px}.vb.l span{left:2px}.vb.r span{right:2px}
+.vadv{text-align:center;font-size:18px;margin-top:4px;letter-spacing:.1em}
+#vs .ab{display:inline-block;margin:2px 3px 0 0}.vl.r div{text-align:right}
+.cutin{position:fixed;left:0;right:0;top:30%;z-index:7;pointer-events:none;opacity:0;transform:translateX(-110%) skewX(-12deg)}
+.cutin.p{transform:translateX(110%) skewX(-12deg)}
+.cutin.go{animation:cin 1.05s cubic-bezier(.2,.9,.2,1) forwards}.cutin.big.go{animation:cin 1.5s cubic-bezier(.2,.9,.2,1) forwards}
+@keyframes cin{0%{opacity:0;transform:translateX(-110%) skewX(-12deg)}15%{opacity:1;transform:translateX(0) skewX(-12deg)}80%{opacity:1;transform:translateX(0) skewX(-12deg)}100%{opacity:0;transform:translateX(30%) skewX(-12deg)}}
+.cutin.p.go{animation-name:cinp}.cutin.big.p.go{animation-name:cinp}
+@keyframes cinp{0%{opacity:0;transform:translateX(110%) skewX(-12deg)}15%{opacity:1;transform:translateX(0) skewX(-12deg)}80%{opacity:1;transform:translateX(0) skewX(-12deg)}100%{opacity:0;transform:translateX(-30%) skewX(-12deg)}}
+.cband{margin:0 auto;width:min(96vw,640px);padding:8px 18px;text-align:center;border-top:3px solid #fff;border-bottom:3px solid #fff;background:linear-gradient(90deg,#d8303acc,#ff8a3add,#d8303acc);box-shadow:0 0 24px #ff6a3a}
+.cutin.p .cband{background:linear-gradient(90deg,#1a4aaacc,#4da3ffdd,#1a4aaacc);box-shadow:0 0 24px #4da3ff}
+.cutin.big .cband{background:linear-gradient(90deg,#6a1ab0cc,#e05affdd,#6a1ab0cc);box-shadow:0 0 34px #e05aff;padding:14px 18px}
+.cband small{display:block;font-size:12px;opacity:.95}.cband b{display:block;font-size:clamp(26px,7vmin,46px);-webkit-text-stroke:2px #000;paint-order:stroke fill;letter-spacing:.08em;text-shadow:0 3px 0 #000a}.cband span{font-size:12px}
+.flash{position:fixed;inset:0;z-index:6;pointer-events:none;opacity:0;background:radial-gradient(circle,#fff,#fff0 70%)}.flash.go{animation:fl .5s ease-out}.flash.big.go{animation:fl .8s ease-out;background:radial-gradient(circle,#fff,#e05aff66 60%,#0000)}
+@keyframes fl{0%{opacity:.85}100%{opacity:0}}
 #bQuit{left:max(8px,env(safe-area-inset-left));bottom:56px;padding:3px 10px;font-size:11px;z-index:4;border-width:2px}
 #fieldBtns span{white-space:nowrap}
 @media (orientation:portrait){
@@ -131,6 +150,7 @@ input.in{width:min(86vw,320px);padding:10px;font-size:26px;text-align:center;let
   <div class="ctl hide" id="fieldBtns"></div>
   <div class="hud hide" id="hintBat">画面をドラッグでミートカーソル移動 → 指を離した瞬間にスイング!</div>
 </div>
+<div id="vs" class="hide"></div><div id="cutin" class="ctl cutin"></div><div id="flash" class="flash"></div>
 <div id="menu" class="panel mid"></div>
 <div id="loading" class="panel mid"><h1 class="logo"><small>DIAMOND STARS</small>読み込み中…</h1></div>
 
@@ -338,6 +358,7 @@ function buildFielders(team){
   const f={};(team.pos||[...fielderMap,'DH']).forEach((p,i)=>{if(p==='DH')return;const c=team.lineup[i];f[p]={card:c,x:FPOS[p].x,v:FPOS[p].v,sp:7.2+stat(c,'speed')*.035+stat(c,'field')*.012,arm:26+stat(c,'arm')*.14,fl:stat(c,'field')};});
   f.P={card:team.pitcher,x:FPOS.P.x,v:FPOS.P.v,sp:6.4,arm:30,fl:60};return f;
 }
+const emitAbil=o=>E.emit(Object.assign({e:'abil'},o));
 const pub=()=>{const S=E.S;return {inn:S.inn,top:S.top,outs:S.outs,balls:S.balls,strikes:S.strikes,score:S.score.slice(),bases:S.bases.map(b=>b?{n:b.card.name,id:b.card.id}:null),
   batIdx:S.lineIdx.slice(),runsInn:S.runsInn,hits:S.hits.slice(),pc:S.pc.slice(),ult:E.ult.map(u=>({b:u.b,p:u.p})),innings:E.cfg.innings};};
 
@@ -381,7 +402,7 @@ async function atBat(){
   const S=E.S,off=S.top?0:1,def=1-off;const offT=E.teams[off],defT=E.teams[def];
   const batter=offT.lineup[S.lineIdx[off]%9],pitcher=defT.pitcher;
   S.balls=0;S.strikes=0;
-  E.emit({e:'atbat',batter:cardView(batter),pitcher:cardView(pitcher),off,def,st:pub()});await sleep(900);
+  E.emit({e:'atbat',batter:cardView(batter),pitcher:cardView(pitcher),off,def,st:pub()});await sleep(2000);
   let result=null,guard=0;
   while(!result&&guard++<30){
     const risp=!!(S.bases[1]||S.bases[2]);
@@ -394,6 +415,7 @@ async function atBat(){
     if(E.cfg.cpuRun&&E.cfg.cpuRun[off]){E.flags.steal[off]=cpuStealDecision(off);}
     if(E.flags.steal[off]){ if(runner2&&!S.bases[2])steal=2;else if(runner1&&!runner2)steal=1; E.flags.steal[off]=0; }
     E.emit({e:'pitch',pitch,steal,off,def});
+    if(pc.ult)emitAbil({key:'ult_p',n:'魔球',d:'人知を超えた変化球',player:pitcher.name,who:'pitch',big:true});
     const bctx={pitch,batter,balls:S.balls,strikes:S.strikes,outs:S.outs,risp,level:E.lv[off],ultAvail:E.ult[off].b,hand:batter.hand};
     const t0=performance.now();
     const sw=await ask(off,'bat',bctx);
@@ -401,6 +423,8 @@ async function atBat(){
     if(sw.ult&&E.ult[off].b){E.ult[off].b=false;}else sw.ult=false;
     const res=resolveSwing(pitch,sw,batter,pitcher,risp);
     E.emit({e:'swing',sw,res:{kind:res.kind},pitch:{endU:pitch.endU,endW:pitch.endW}});
+    if(sw.ult)emitAbil({key:'ult_b',n:'必殺スイング',d:'渾身の一振り',player:batter.name,who:'bat',big:true});
+    {let k=0;for(const a of (res.ab||[])){if(k++>=2)break;emitAbil({key:a.k,n:ABIL[a.k].n,d:ABIL[a.k].d,player:a.c.name,who:a.who});}}
     if(res.kind==='inplay'||res.kind==='foul'){
       const ball=simBall(res.ev,res.la,res.psi);ball.hand=batter.hand;
       E.emit({e:'contact',ball:packBall(ball),kind:res.kind,ev:Math.round(res.ev*3.6),la:Math.round(res.la),q:res.q,steal});
@@ -414,7 +438,12 @@ async function atBat(){
     // 空振り・見逃し・ボール
     let stealRes=null;
     if(res.kind==='ball'){S.balls++;}else{S.strikes++;}
-    if(steal){stealRes=resolveSteal(steal,off,def,pitch);}
+    if(res.kind==='swingMiss'){const pa=[];if(pitch.type!=='str')pa.push('sharp');if(pitch.kph>=148)pa.push('ace');if(risp)pa.push('fire');if(S.strikes>=3)pa.push('ks');
+      const k0=pa.find(k=>has(pitcher,k));if(k0)emitAbil({key:k0,n:ABIL[k0].n,d:ABIL[k0].d,player:pitcher.name,who:'pitch'});}
+    else if(res.kind==='strike'&&has(pitcher,'stable')&&hy(pitch.endU-pitch.tu,pitch.endW-pitch.tw)<.14)emitAbil({key:'stable',n:ABIL.stable.n,d:ABIL.stable.d,player:pitcher.name,who:'pitch'});
+    if(steal){stealRes=resolveSteal(steal,off,def,pitch);
+      if(stealRes){if(stealRes.ok&&has(stealRes.runner.card,'thief'))emitAbil({key:'thief',n:ABIL.thief.n,d:ABIL.thief.d,player:stealRes.runner.card.name,who:'bat'});
+        else if(!stealRes.ok&&has(pitcher,'quick'))emitAbil({key:'quick',n:ABIL.quick.n,d:ABIL.quick.d,player:pitcher.name,who:'pitch'});}}
     const lab={ball:'ボール',strike:'ストライク',swingMiss:'空振り'}[res.kind];
     E.emit({e:'banner',t:lab,c:res.kind==='ball'?'#6ee08a':'#ffd23a',st:pub()});await sleep(700);
     if(stealRes){await doSteal(stealRes,off);if(S.outs>=3){result='out';break;}}
@@ -450,9 +479,10 @@ function resolveSwing(pitch,sw,B,P,risp){
   const inZone=Math.abs(pitch.endU)<=1.02&&Math.abs(pitch.endW)<=1.02;
   if(!sw.swung){return {kind:inZone?'strike':'ball'};}
   const dist=hy(sw.cu-pitch.endU,sw.cw-pitch.endW);const dtA=Math.abs(sw.dt);
-  let R=.52+stat(B,'meet')*.0058;if(has(B,'genius'))R*=1.18;if(has(B,'clutch')&&risp)R*=1.1;if(sw.power)R*=.8;if(sw.ult)R*=1.8;
+  const R0=.52+stat(B,'meet')*.0058;let R=R0;if(has(B,'genius'))R*=1.18;if(has(B,'clutch')&&risp)R*=1.1;if(sw.power)R*=.8;if(sw.ult)R*=1.8;
   if(dtA>240||dist>R*1.8)return {kind:'swingMiss'};
   const qd=clamp(1-dist/R,0,1),qt=clamp(1-dtA/150,0,1);const q=qd*.55+qt*.45;
+  const help=dist>R0*(sw.power?.8:1)&&dist<=R;
   const pitchPow=(stat(P,'vel')+stat(P,'brk'))/2;
   let mc=.09+(pitchPow-stat(B,'meet'))/220+(1-q)*.62+(has(P,'ks')?.07:0)+(pitch.ult?.3:0)-(sw.ult?.25:0);
   mc=clamp(mc,.02,.88);
@@ -467,8 +497,11 @@ function resolveSwing(pitch,sw,B,P,risp){
   let psi=pull*(hand==='R'?-1:1)*34+(pitch.endU-sw.cu)*9+randn()*(has(B,'wide')?5:7);
   if(has(B,'wide'))psi*=.75;
   psi=clamp(psi,-52,52);
-  if(Math.random()<fp)return {kind:'foul',ev:ev*.85,la:la+rnd(0,25),psi:psi+sign(psi||1)*rnd(30,60)*(Math.random()<.7?1:.3),q};
-  return {kind:'inplay',ev,la,psi,q};
+  const ab=[];const pu=(cd,k,who)=>{if(has(cd,k))ab.push({c:cd,k,who});};
+  if(help){pu(B,'genius','bat');if(risp)pu(B,'clutch','bat');}
+  if(q>.72)pu(B,'archer','bat');if(la>22)pu(B,'danto','bat');if(Math.abs(psi)>30)pu(B,'wide','bat');if(ev<22)pu(P,'heavy','pitch');
+  if(Math.random()<fp)return {ab:[],kind:'foul',ev:ev*.85,la:la+rnd(0,25),psi:psi+sign(psi||1)*rnd(30,60)*(Math.random()<.7?1:.3),q};
+  return {ab,kind:'inplay',ev,la,psi,q};
 }
 /* ---------- 打球シミュレーション ---------- */
 function simBall(ev,laDeg,psiDeg){
@@ -526,6 +559,7 @@ async function playInPlay(ball,batter,off,def,res,steal){
   // 反映
   S.outs+=plan.outs;S.score[off]+=plan.runs;S.runsInn[off][S.inn-1]=(S.runsInn[off][S.inn-1]||0)+plan.runs;S.bases=plan.newBases;
   if(plan.hit)S.hits[off]++;
+  if(plan.hit&&has(batter,'speedy')&&(plan.kind==='infieldHit'||/ツー|スリー|ランニング/.test(plan.label)))emitAbil({key:'speedy',n:ABIL.speedy.n,d:ABIL.speedy.d,player:batter.name,who:'bat'});
   E.emit({e:'banner',t:plan.label,c:plan.good?'#ffd23a':plan.runs?'#ffd23a':'#fff',st:pub(),runs:plan.runs});
   await sleep(900);E.emit({e:'state',st:pub()});
   return 'play';
@@ -1200,6 +1234,7 @@ function handleEv(ev){
       TW.length=0;hideTrail();batUIOff();ballMesh.visible=false;ballShadow.visible=false;V.off=ev.top?0:1;V.st=ev.st;setupHalf(V.off);refreshHUD(ev.st);
       banner(`${ev.inn}回${ev.top?'表':'裏'}`,'#fff');setCamMode('home');break;
     case 'atbat':{
+      showVS(ev);
       TW.length=0;hideTrail();batUIOff();resetFieldPositions();for(const [,a] of V.runners)killActor(a);V.runners.clear();
       V.st=ev.st;V.view=myView();setBatter(ev.batter,ev.pitcher.hand);syncBases(ev.st);ballMesh.visible=false;ballShadow.visible=false;
       setInfo(ev.batter,ev.pitcher);refreshHUD(ev.st);setCamMode(V.view);V.mode='idle';
@@ -1210,6 +1245,7 @@ function handleEv(ev){
       {const t=`${ev.pitch.kph}km/h ${ev.pitch.name}`;toast(t,1500);}
       clearFlagBtns(true,false);
       if(myTeamOff()&&ME.roles.has('bat'))batUIOn();break;
+    case 'abil':queueAbil(ev);break;
     case 'swing':
       if(ev.sw&&ev.sw.swung&&!V.swingShown)doSwing();
       if(ev.res.kind==='swingMiss'){sfx('catch');}
@@ -1239,6 +1275,37 @@ resize();
 document.addEventListener('gesturestart',e=>e.preventDefault());
 let lastTap=0;document.addEventListener('touchend',e=>{const n=Date.now();if(n-lastTap<350&&!/INPUT|TEXTAREA/.test(e.target.tagName))e.preventDefault();lastTap=n;},{passive:false});
 document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault();},{passive:false});
+
+/* ---------- 対決比較図 ---------- */
+let vsT=null;
+function showVS(ev){
+  const b=ev.batter,p=ev.pitcher,vs=$('vs');if(!vs)return;
+  const row=(lab,l,r)=>{const tot=Math.max(1,l+r);const lp=Math.min(100,l),rp=Math.min(100,r);
+    return `<div class="vr"><div class="vb l"><i style="width:${lp}%;background:${l>=r?'#4da3ff':'#4da3ff88'}"></i><span>${l}</span></div><label>${lab}</label><div class="vb r"><i style="width:${rp}%;background:${r>=l?'#ff5a5a':'#ff5a5a88'}"></i><span>${r}</span></div></div>`;};
+  const mt=stat(b,'meet'),pw=stat(b,'power'),sp=stat(b,'speed'),vel=stat(p,'vel'),brk=stat(p,'brk'),ctl=stat(p,'ctrl'),sta=stat(p,'sta');
+  const adv=Math.round(((mt*1.1+pw)-(vel+brk*1.1))/6);const txt=adv>=4?'打者有利':adv<=-4?'投手有利':'互角の勝負';const col=adv>=4?'#4da3ff':adv<=-4?'#ff5a5a':'#ffd23a';
+  const chips=(c)=>c.abil.length?c.abil.map(a=>`<span class="ab" style="background:${ABIL[a].t==='B'?'#d8303a':'#2a64c8'}">${ABIL[a].n}</span>`).join(''):'<span style="opacity:.6;font-size:10px">特殊能力なし</span>';
+  const tmc=c=>{const t=TEAMS[tm(c)];return `<small style="color:${t.c}">●${t.n}</small>`;};
+  vs.innerHTML=`<div class="vh"><div class="vl"><small>${ev.off===ME.team?'あなたの打者':'打者'}</small><b>${esc(b.name)}</b>${tmc(b)}<br>${handTxt(b.hand)}打 OVR ${ovr(b)}<div>${chips(b)}</div></div>
+    <div class="vm">VS</div><div class="vl r"><small>${ev.def===ME.team?'あなたの投手':'投手'}</small><b>${esc(p.name)}</b>${tmc(p)}<br>${handTxt(p.hand)}投 OVR ${ovr(p)}<div>${chips(p)}</div></div></div>
+    ${row('ミート ⇄ 変化',mt,brk)}${row('パワー ⇄ 球速',pw,vel)}${row('走力 ⇄ 制球',sp,ctl)}
+    <div class="vadv" style="color:${col}">${txt}</div>`;
+  vs.classList.remove('hide');vs.classList.remove('show');void vs.offsetWidth;vs.classList.add('show');
+  clearTimeout(vsT);vsT=setTimeout(()=>vs.classList.add('hide'),1850);
+}
+/* ---------- 特殊能力 発動演出 ---------- */
+const abQ=[];let abBusy=false;
+function queueAbil(ev){if(abQ.length<3)abQ.push(ev);if(!abBusy)runAbil();}
+function runAbil(){
+  const ev=abQ.shift();if(!ev){abBusy=false;return;}abBusy=true;
+  const el=$('cutin'),fl=$('flash');const pit=ev.who==='pitch';
+  el.className='ctl cutin '+(pit?'p':'b')+(ev.big?' big':'');
+  el.innerHTML=`<div class="cband"><small>${esc(ev.player)}</small><b>${esc(ev.n)}</b><span>${esc(ev.d||'')}</span></div>`;
+  el.classList.add('go');fl.className=(ev.big?'flash big':'flash')+' go';
+  sfx(ev.big?'good':'good2');if(ev.big)shakeCam(.45);else shakeCam(.15);
+  setTimeout(()=>{el.classList.remove('go');fl.classList.remove('go');},ev.big?1500:1050);
+  setTimeout(runAbil,ev.big?1550:1100);
+}
 
 
 /* ============================================================
