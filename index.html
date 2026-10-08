@@ -1154,7 +1154,7 @@ $('bBack').addEventListener('click',()=>{$('bSteal').classList.remove('on');$('b
 function batUIOn(ctx){
   UI.mode='bat';UI.cursor.u=UI.cursor.u||0;UI.cursor.w=UI.cursor.w||0;
   $('bPower').classList.remove('hide');$('cursorPad').classList.remove('hide');$('hintBat').classList.remove('hide');
-  UI.power=false;$('bPower').innerHTML='パワー<br>OFF';$('bPower').classList.remove('on');
+  $('bPower').innerHTML='パワー<br>'+(UI.power?'ON':'OFF');$('bPower').classList.toggle('on',!!UI.power);
   CT.armUlt=false;$('bSp').classList.add('hide');$('bSp').classList.remove('on');
 }
 function batUIOff(){UI.mode=null;for(const id of ['bSwing','bPower','bSp','cursorPad','hintBat'])$(id).classList.add('hide');}
@@ -1162,7 +1162,7 @@ function meetRadius(B,risp,power){let R=.52+stat(B,'meet')*.0058;if(has(B,'geniu
 function askBat(ctx,done){
   batUIOn(ctx);
   const arrive=V.pitchStart+(ctx.pitch.T+REL)*1000;
-  UI.meetR=meetRadius(ctx.batter,ctx.risp,false);CT.curCtx=ctx;
+  UI.meetR=meetRadius(ctx.batter,ctx.risp,!!UI.power);CT.curCtx=ctx;
   if(ctx.ultAvail){$('bSp').classList.remove('hide');$('bSp').classList.add('ready');}
   CT.fired=false;
   CT.swing=()=>{if(CT.fired)return;CT.fired=true;clearTimeout(CT.timer);const dt=NOW()-arrive;
