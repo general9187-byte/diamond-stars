@@ -214,7 +214,7 @@ let CARD_ID=1;
 function mkName(){return pick(SURN)+' '+pick(GIVN);}
 function genCard(kind,rar,opts={}){
   const base=RAR_BASE[rar]+(opts.bonus||0);const s=()=>clamp(Math.round(base+randn()*7),20,99);
-  const c={id:CARD_ID++,name:opts.name||mkName(),kind,rar,hand:pick(['R','R','R','L','L']),dup:0,abil:[]};
+  const c={id:CARD_ID++,name:opts.name||mkName(),kind,rar,team:rint(0,7),hand:pick(['R','R','R','L','L']),dup:0,abil:[]};
   if(kind==='B'){c.hand=pick(['R','R','R','L','L','L']);Object.assign(c,{meet:s(),power:s(),speed:s(),arm:s(),field:s()});
     const n=[0,0,1,2,3][rar]-(Math.random()<.4?1:0);for(let i=0;i<n;i++){const a=pick(ABIL_B);if(!c.abil.includes(a))c.abil.push(a);}}
   else{Object.assign(c,{vel:s(),ctrl:s(),brk:s(),sta:s()});c.pitches=[{id:'str',lv:rint(1,3)+Math.floor(rar/2)}];
@@ -222,7 +222,7 @@ function genCard(kind,rar,opts={}){
     const n=[0,0,1,2,3][rar]-(Math.random()<.4?1:0);for(let i=0;i<n;i++){const a=pick(ABIL_P);if(!c.abil.includes(a))c.abil.push(a);}}
   c.abil=c.abil.slice(0,3);return c;
 }
-const stat=(c,k)=>clamp((c[k]||0)+Math.min(8,c.dup||0),1,99);
+const stat=(c,k)=>clamp((c[k]||0)+Math.min(8,c.dup||0)+((c.bf&&c.bf[k])||0),1,110);
 const ovr=c=>c.kind==='B'?Math.round((stat(c,'meet')*1.2+stat(c,'power')*1.1+stat(c,'speed')*.5+stat(c,'field')*.4+stat(c,'arm')*.3)/3.5):Math.round((stat(c,'vel')+stat(c,'ctrl')+stat(c,'brk')+stat(c,'sta')*.5)/3.5);
 const has=(c,a)=>c&&c.abil&&c.abil.includes(a);
 
@@ -233,23 +233,79 @@ let SAVE=null;
 function newSave(){
   const cards=[];for(let i=0;i<9;i++)cards.push(genCard('B',i<2?2:1));cards.push(genCard('P',2));cards.push(genCard('B',2));cards.push(genCard('P',1));
   const s={cards,tickets:30,cleared:0,design:'PRO',teamName:'マイチーム',lineup:[],pitcher:0,nextId:CARD_ID,wins:0,loses:0,stars:{}};
-  autoTeam(s);return s;
+  cards.slice(0,5).forEach(c=>c.team=0);cards[9].team=0;s.pos=DEFPOS.slice();autoTeam(s);return s;
 }
 function loadSave(){
-  try{const j=localStorage.getItem('dss_save2');if(j){const s=JSON.parse(j);CARD_ID=s.nextId||CARD_ID;return s;}}catch(e){}
+  try{const j=localStorage.getItem('dss_save2');if(j){const s=JSON.parse(j);CARD_ID=s.nextId||CARD_ID;if(!s.pos)s.pos=DEFPOS.slice();return s;}}catch(e){}
   return newSave();
 }
 function writeSave(){try{SAVE.nextId=CARD_ID;localStorage.setItem('dss_save2',JSON.stringify(SAVE));}catch(e){}}
+const DEFPOS=['CF','SS','B2','B3','B1','LF','RF','C','DH'];
+const POS_JP={CF:'中',SS:'遊',B2:'二',B3:'三',B1:'一',LF:'左',RF:'右',C:'捕',DH:'DH'};
+const TEAMS=[
+ {n:'東雲高校',c:'#ff6a6a',th:'機動力',stB:['speed','field'],stP:['sta','ctrl'],abB:'speedy',abP:'quick'},
+ {n:'桜ヶ丘学園',c:'#ff9ad0',th:'巧打',stB:['meet','speed'],stP:['ctrl'],abB:'genius',abP:'stable'},
+ {n:'青嵐高校',c:'#5ad0ff',th:'長打力',stB:['power','arm'],stP:['vel'],abB:'archer',abP:'ace'},
+ {n:'王者学園',c:'#ffd23a',th:'総合力',stB:['meet','power','speed','arm','field'],stP:['vel','ctrl','brk','sta'],abB:'clutch',abP:'fire'},
+ {n:'ドーム・ジュニアーズ',c:'#a98aff',th:'投手力',stB:['field','arm','meet'],stP:['vel','brk','ctrl'],abB:'wide',abP:'sharp'},
+ {n:'ベイブリッジ・ドルフィンズ',c:'#4de0c0',th:'走攻守',stB:['speed','arm','field'],stP:['ctrl','sta'],abB:'thief',abP:'quick'},
+ {n:'ライトニング・ヴォルツ',c:'#ffb02e',th:'強打',stB:['power','meet'],stP:['vel','brk'],abB:'danto',abP:'ks'},
+ {n:'サンライズ・フェニックス',c:'#ff7a3a',th:'勝負強さ',stB:['meet','power','field'],stP:['vel','ctrl','brk'],abB:'clutch',abP:'heavy'},
+];
+const tm=c=>c.team!==undefined?c.team:(c.id%8);
+const TIER_V=[0,3,6,9];
+function applyCombos(team){
+  const pos=team.pos||DEFPOS;
+  const L=team.lineup.map(c=>({...c,abil:[...(c.abil||[])],bf:{}})),P={...team.pitcher,abil:[...(team.pitcher.abil||[])],bf:{}};
+  const all=[...L,P],active=[];
+  const add=(c,k,v)=>{c.bf[k]=(c.bf[k]||0)+v;};
+  const ab=(c,a)=>{if(!c.abil.includes(a)&&c.abil.length<4)c.abil.push(a);};
+  const at=p=>L[pos.indexOf(p)];
+  TEAMS.forEach((T,ti)=>{const mem=all.filter(c=>tm(c)===ti),n=mem.length,tier=n>=7?3:n>=5?2:n>=3?1:0;if(!tier)return;const v=TIER_V[tier];
+    for(const c of mem){for(const k of (c.kind==='B'?T.stB:T.stP))add(c,k,v);if(tier>=3)ab(c,c.kind==='B'?T.abB:T.abP);}
+    active.push({n:`${T.n} Lv${tier}`,d:`${n}人在籍: ${T.th}系の能力+${v}${tier>=3?' / 特殊能力付与':''}`,c:T.c});});
+  const hs=L.map(c=>c.hand==='S'?'B':c.hand);
+  if(hs.every(h=>h==='R'||h==='B')){L.forEach(c=>add(c,'meet',3));active.push({n:'右打線そろい',d:'打者全員が右打ち: ミート+3',c:'#8ad'});}
+  else if(hs.every(h=>h==='L'||h==='B')){L.forEach(c=>add(c,'meet',3));active.push({n:'左打線そろい',d:'打者全員が左打ち: ミート+3',c:'#8ad'});}
+  const sr=all.filter(c=>c.rar>=3).length;
+  if(sr>=4){const v=sr>=7?4:2;all.forEach(c=>{if(c.kind==='B'){add(c,'meet',v);add(c,'power',v);add(c,'speed',v);}else{add(c,'vel',v);add(c,'ctrl',v);add(c,'brk',v);}});active.push({n:'スター軍団',d:`SR以上が${sr}人: 全員の主要能力+${v}`,c:'#e6c'});}
+  const cc=at('C');
+  if(cc&&tm(cc)===tm(P)){add(P,'ctrl',6);add(P,'vel',3);add(P,'sta',6);add(cc,'field',6);add(cc,'arm',4);active.push({n:'黄金バッテリー',d:'投手と捕手が同じチーム: 制球+6 球速+3 / 捕手 守備+6 肩+4',c:'#fc6'});}
+  const inf=['B1','B2','B3','SS'].map(at);
+  if(inf.every(Boolean)&&inf.every(c=>tm(c)===tm(inf[0]))){inf.forEach(c=>{add(c,'field',8);add(c,'arm',3);});add(P,'ctrl',2);active.push({n:'鉄壁の内野陣',d:'内野手4人が同じチーム: 守備+8 肩+3',c:'#6c8'});}
+  const out=['LF','CF','RF'].map(at);
+  if(out.every(Boolean)&&out.every(c=>tm(c)===tm(out[0]))){out.forEach(c=>{add(c,'speed',6);add(c,'field',5);add(c,'arm',3);});active.push({n:'韋駄天の外野陣',d:'外野手3人が同じチーム: 走力+6 守備+5 肩+3',c:'#6cf'});}
+  if(tm(L[2])===tm(L[3])&&tm(L[3])===tm(L[4])){[2,3,4].forEach(i=>{add(L[i],'power',6);add(L[i],'meet',3);ab(L[i],'clutch');});active.push({n:'最強クリーンナップ',d:'3〜5番が同じチーム: パワー+6 ミート+3 チャンス◎',c:'#f77'});}
+  if(tm(L[0])===tm(L[1])){[0,1].forEach(i=>{add(L[i],'speed',6);add(L[i],'meet',3);ab(L[i],'speedy');});active.push({n:'切り込み隊',d:'1・2番が同じチーム: 走力+6 ミート+3 走塁◎',c:'#fa6'});}
+  for(let t=0;t<8;t++){if(all.filter(c=>tm(c)===t).length>=9){all.forEach(c=>{for(const k of (c.kind==='B'?['meet','power','speed','arm','field']:['vel','ctrl','brk','sta']))add(c,k,4);});active.push({n:'フルメンバー',d:'同じチーム9人以上: 全能力+4',c:'#fff'});break;}}
+  return {...team,pos,lineup:L,pitcher:P,combos:active};
+}
+const POS_FIT={C:c=>stat(c,'field')+stat(c,'arm')*.8,SS:c=>stat(c,'field')+stat(c,'speed')*.5+stat(c,'arm')*.6,CF:c=>stat(c,'speed')+stat(c,'field')*.8,B2:c=>stat(c,'field')+stat(c,'speed')*.4,B3:c=>stat(c,'field')+stat(c,'arm')*.8,RF:c=>stat(c,'arm')+stat(c,'speed')*.5+stat(c,'field')*.4,LF:c=>stat(c,'speed')*.6+stat(c,'field')*.6,B1:c=>stat(c,'field')*.6+stat(c,'meet')*.2};
+const batScore=c=>stat(c,'meet')*1.2+stat(c,'power')*1.1+stat(c,'speed')*.3;
+function arrangeLineup(nine){
+  const pool=nine.slice(),posOf=new Map();
+  for(const p of ['C','SS','CF','B2','B3','RF','LF','B1']){let best=null,bs=-1;for(const c of pool){const s=POS_FIT[p](c);if(s>bs){bs=s;best=c;}}pool.splice(pool.indexOf(best),1);posOf.set(best,p);}
+  posOf.set(pool[0],'DH');
+  const s=nine.slice().sort((a,b)=>batScore(b)-batScore(a));
+  const order=[s[3],s[4],s[0],s[1],s[2],s[5],s[6],s[7],s[8]];
+  return {lineup:order,pos:order.map(c=>posOf.get(c))};
+}
 function autoTeam(s){
-  const bs=s.cards.filter(c=>c.kind==='B').sort((a,b)=>ovr(b)-ovr(a)).slice(0,9);
-  const p=s.cards.filter(c=>c.kind==='P').sort((a,b)=>ovr(b)-ovr(a))[0];
-  s.lineup=bs.map(c=>c.id);s.pitcher=p?p.id:0;
+  const B=s.cards.filter(c=>c.kind==='B'),P=s.cards.filter(c=>c.kind==='P');if(B.length<9||!P.length)return;
+  const bo=B.slice().sort((a,b)=>ovr(b)-ovr(a)),po=P.slice().sort((a,b)=>ovr(b)-ovr(a)).slice(0,4);
+  const cands=[];const mk=f=>bo.slice().sort((a,b)=>(ovr(b)+f(b))-(ovr(a)+f(a))).slice(0,9);
+  cands.push(mk(()=>0));for(let t=0;t<8;t++)for(const w of [4,8,16,40])cands.push(mk(c=>tm(c)===t?w:0));
+  let best=null;
+  for(const nine of cands){const arr=arrangeLineup(nine);for(const p of po){const T=applyCombos({lineup:arr.lineup,pos:arr.pos,pitcher:p});
+    const sc=T.lineup.reduce((a,c)=>a+ovr(c),0)+ovr(T.pitcher)*3;if(!best||sc>best.sc)best={sc,arr,p};}}
+  s.lineup=best.arr.lineup.map(c=>c.id);s.pos=best.arr.pos;s.pitcher=best.p.id;
 }
 const cardById=id=>SAVE.cards.find(c=>c.id===id);
 function myTeam(){
+  if(!SAVE.pos||SAVE.pos.length!==9)SAVE.pos=DEFPOS.slice();
   const lineup=SAVE.lineup.map(cardById).filter(Boolean);const pit=cardById(SAVE.pitcher);
   if(lineup.length<9||!pit){autoTeam(SAVE);return myTeam();}
-  return {name:SAVE.teamName,design:SAVE.design,lineup,pitcher:pit};
+  return {name:SAVE.teamName,design:SAVE.design,lineup,pitcher:pit,pos:SAVE.pos};
 }
 
 /* ============================================================
@@ -279,7 +335,7 @@ function genCpuTeam(stageIdx,design){
 const E={S:null,teams:null,ctl:null,hooks:{local:null,remote:null},emit:()=>{},flags:null,cfg:null,lv:[0,0],fielders:[null,null],ult:null,running:false};
 const fielderMap=['CF','SS','B2','B3','B1','LF','RF','C']; // lineup[0..7] -> 守備位置, lineup[8] = DH
 function buildFielders(team){
-  const f={};fielderMap.forEach((p,i)=>{const c=team.lineup[i];f[p]={card:c,x:FPOS[p].x,v:FPOS[p].v,sp:7.2+stat(c,'speed')*.035+stat(c,'field')*.012,arm:26+stat(c,'arm')*.14,fl:stat(c,'field')};});
+  const f={};(team.pos||[...fielderMap,'DH']).forEach((p,i)=>{if(p==='DH')return;const c=team.lineup[i];f[p]={card:c,x:FPOS[p].x,v:FPOS[p].v,sp:7.2+stat(c,'speed')*.035+stat(c,'field')*.012,arm:26+stat(c,'arm')*.14,fl:stat(c,'field')};});
   f.P={card:team.pitcher,x:FPOS.P.x,v:FPOS.P.v,sp:6.4,arm:30,fl:60};return f;
 }
 const pub=()=>{const S=E.S;return {inn:S.inn,top:S.top,outs:S.outs,balls:S.balls,strikes:S.strikes,score:S.score.slice(),bases:S.bases.map(b=>b?{n:b.card.name,id:b.card.id}:null),
@@ -303,7 +359,7 @@ async function ask(ti,role,ctx){
 }
 async function runGame(){
   const S=E.S,N=E.cfg.innings;
-  E.emit({e:'start',innings:N,teams:E.teams.map(t=>({name:t.name,design:t.design,ph:t.pitcher.hand,lineup:t.lineup.map(c=>c.name),pitcher:t.pitcher.name})),park:E.cfg.park,roles:E.cfg.rolesInfo||null});
+  E.emit({e:'start',innings:N,teams:E.teams.map(t=>({name:t.name,design:t.design,combos:(t.combos||[]).map(x=>x.n),ph:t.pitcher.hand,lineup:t.lineup.map(c=>c.name),pitcher:t.pitcher.name})),park:E.cfg.park,roles:E.cfg.rolesInfo||null});
   await sleep(1200);
   while(!S.over){
     S.outs=0;S.balls=0;S.strikes=0;S.bases=[null,null,null];
@@ -370,7 +426,7 @@ async function atBat(){
   E.emit({e:'state',st:pub()});
   return result;
 }
-const cardView=c=>({id:c.id,name:c.name,kind:c.kind,hand:c.hand,rar:c.rar,abil:c.abil,meet:c.meet,power:c.power,speed:c.speed,arm:c.arm,field:c.field,vel:c.vel,ctrl:c.ctrl,brk:c.brk,sta:c.sta,pitches:c.pitches,dup:c.dup});
+const cardView=c=>({id:c.id,name:c.name,kind:c.kind,hand:c.hand,rar:c.rar,abil:c.abil,meet:c.meet,power:c.power,speed:c.speed,arm:c.arm,field:c.field,vel:c.vel,ctrl:c.ctrl,brk:c.brk,sta:c.sta,pitches:c.pitches,dup:c.dup,bf:c.bf,team:c.team});
 /* ---------- 投球 ---------- */
 function makePitch(pc,P,B,risp,pcount){
   const pt=PT[pc.type]||PT.str;const known=(P.pitches||[]).find(x=>x.id===pc.type)||{lv:1};
@@ -743,7 +799,7 @@ function makeActor(design,role,hand,card){
   for(const k in keys){const m=MODELS[keys[k]];if(!m)continue;const g=m.group.clone();if(hand&&hand!==m.hand)g.scale.x*=-1;g.visible=k==='READY';tintModel(g,card);root.add(g);poses[k]=g;}
   root.rotation.order='YXZ';
   if(role==='BATTER')root.traverse(o=>{if(o.isMesh)o.material=o.material.clone();});
-  const a={root,poses,pose:'READY',x:0,v:0,yaw:0,role,design,setPose(n){if(!poses[n])return;for(const k in poses)poses[k].visible=k===n;a.pose=n;},place(x,v,yaw){a.x=x;a.v=v;if(yaw!==undefined)a.yaw=yaw;root.position.set(x,0,sceneZ(v));root.rotation.y=a.yaw;},face(tx,tv){a.yaw=Math.atan2(tx-a.x,a.v-tv);root.rotation.y=a.yaw;}};
+  const a={root,poses,hand,pose:'READY',x:0,v:0,yaw:0,role,design,setPose(n){if(!poses[n])return;for(const k in poses)poses[k].visible=k===n;a.pose=n;},place(x,v,yaw){a.x=x;a.v=v;if(yaw!==undefined)a.yaw=yaw;root.position.set(x,0,sceneZ(v));root.rotation.y=a.yaw;},face(tx,tv){a.yaw=Math.atan2(tx-a.x,a.v-tv);root.rotation.y=a.yaw;}};
   a.fade=v=>{root.traverse(o=>{if(o.isMesh){o.material.transparent=v<1;o.material.opacity=v;o.material.depthWrite=v>=1;}});};
   scene.add(root);return a;
 }
@@ -813,8 +869,16 @@ function updCamera(dt){
 /* ---------- 投球・打撃アニメ ---------- */
 function showPitch(ev){
   const p=ev.pitch;V.pitch=p;V.pitchStart=performance.now();V.swingShown=false;V.mode='pitching';
-  const P=V.pitcher;if(P){const z0=sceneZ(22.6);
-    tw(.42,k=>{const b=k<.45?ease(k/.45):1-ease((k-.45)/.55);P.root.position.z=z0-.35*b+(k>.45?1.3*ease((k-.45)/.55):0);P.root.rotation.x=-.22*b+(k>.6?.28*ease((k-.6)/.4):0);P.setPose(k>.62?'ACTION':'READY');},()=>{P.root.rotation.x=.06;},.02);}
+  const P=V.pitcher;if(P){const z0=sceneZ(22.6),sd=P.hand==='L'?1:-1,Y0=P.yaw;
+    const E=ease,cl=(x)=>clamp(x,0,1);
+    tw(.95,k=>{const s=k*.95;let yaw=0,lean=0,hop=0,dz=0,tilt=0;
+      if(s<.16){const e=E(cl(s/.16));yaw=sd*.95*e;lean=-.1*e;tilt=.05*sd*e;}                 // セット→体を横向きに
+      else if(s<.30){const e=E(cl((s-.16)/.14));yaw=sd*.95;lean=-.1-.14*e;hop=.16*Math.sin(Math.PI*e)*.9+.1*e;tilt=.05*sd-.08*sd*e;dz=-.12*e;}  // 足を上げる(テイクバック)
+      else if(s<.40){const e=E(cl((s-.30)/.10));yaw=sd*.95*(1-e);lean=-.24+.4*e;hop=.1*(1-e);dz=-.12+1.25*e;tilt=-.03*sd*(1-e);}      // 踏み込み・体の回転
+      else if(s<.58){const e=E(cl((s-.40)/.18));yaw=-sd*.3*e;lean=.16+.34*e;dz=1.13+.5*e;}             // リリース→フォロースルー
+      else{const e=E(cl((s-.58)/.37));yaw=-sd*.3*(1-e);lean=.5-.44*e;dz=1.63-.2*e;}                      // 戻り
+      P.root.position.z=z0-dz*-1;P.root.position.y=hop;P.root.rotation.set(lean,Y0+yaw,tilt);
+      P.setPose(s>=.36&&s<.62?'ACTION':'READY');},()=>{P.root.rotation.set(.06,Y0,0);P.root.position.y=0;},.02);}
   // ボール飛行
   const t0=performance.now();V.bc={type:'pitch',start:t0+REL*1000,p};
   tw(.01,()=>{},()=>{},0);
@@ -1130,7 +1194,8 @@ function handleEv(ev){
   switch(ev.e){
     case 'start':
       V.teams=ev.teams;V.names=ev.teams.map(t=>t.name);V.innings=ev.innings;V.runners.clear();buildPark(ev.park);showHUD(true);hideMenu();$('loading').classList.add('hide');
-      setCamMode('home');ballMesh.visible=false;sfx('start');banner('プレイボール!','#fff');buildFieldBtns();updateRoleUI();break;
+      setCamMode('home');ballMesh.visible=false;sfx('start');banner('プレイボール!','#fff');
+      {const cb=(ev.teams[ME.team]&&ev.teams[ME.team].combos)||[];if(cb.length)setTimeout(()=>toast('パーティコンボ発動: '+cb.join(' / '),4200),1400);}buildFieldBtns();updateRoleUI();break;
     case 'inning':
       TW.length=0;hideTrail();batUIOff();ballMesh.visible=false;ballShadow.visible=false;V.off=ev.top?0:1;V.st=ev.st;setupHalf(V.off);refreshHUD(ev.st);
       banner(`${ev.inn}回${ev.top?'表':'裏'}`,'#fff');setCamMode('home');break;
@@ -1210,7 +1275,7 @@ async function startGame(o){ // o:{mode,teams,innings,park,ctl,lv,cpuRun,stage}
 }
 function opposite(d){return d==='PRO'?'HS':'PRO';}
 function startCpuStage(idx,innings){
-  const my=myTeam();const st=STAGES[idx];
+  const my=applyCombos(myTeam());const st=STAGES[idx];
   const cpu=genCpuTeam(idx,opposite(my.design));
   ME.team=0;ME.roles=new Set(['bat','pitch','run','field']);
   startGame({mode:'cpu',stage:idx,innings,park:st.park,teams:[my,cpu],
@@ -1245,10 +1310,10 @@ function seg(id,opts,cur){return `<div class="seg" id="${id}">${opts.map(([v,n])
 function bindSeg(id,cb){const s=$(id);s.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{s.querySelectorAll('button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');sfx('ui');cb(b.dataset.v);}));}
 function bars(c){
   const rows=c.kind==='B'?[['ミート','meet'],['パワー','power'],['走力','speed'],['肩','arm'],['守備','field']]:[['球速','vel'],['制球','ctrl'],['変化','brk'],['スタミナ','sta']];
-  return rows.map(([n,k])=>`<span>${n}</span><i><s style="width:${stat(c,k)}%"></s></i><span>${stat(c,k)}</span>`).join('');
+  return rows.map(([n,k])=>`<span>${n}</span><i><s style="width:${Math.min(100,stat(c,k))}%"></s></i><span>${stat(c,k)}</span>`).join('');
 }
 function cardHTML(c,extra='',cls=''){
-  return `<div class="card r${c.rar} ${cls}" ${extra}><span class="rar">${RAR[c.rar]}</span><b>${esc(c.name)}</b>${c.kind==='B'?'打者':'投手'} ${handTxt(c.hand)} OVR<b style="display:inline;color:var(--gold)">${ovr(c)}</b>
+  return `<div class="card r${c.rar} ${cls}" ${extra}><span class="rar">${RAR[c.rar]}</span><b>${esc(c.name)}</b><span style="color:${TEAMS[tm(c)].c};font-size:10px">●${TEAMS[tm(c)].n}</span><br>${c.kind==='B'?'打者':'投手'} ${handTxt(c.hand)} OVR<b style="display:inline;color:var(--gold)">${ovr(c)}</b>
    <div class="stat">${bars(c)}</div>${c.abil.map(a=>`<span class="ab">${ABIL[a].n}</span>`).join('')}${c.kind==='P'?'<div style="font-size:10px;opacity:.9">'+c.pitches.map(p=>PT[p.id].n+p.lv).join(' / ')+'</div>':''}</div>`;
 }
 /* ---------- タイトル ---------- */
@@ -1343,24 +1408,32 @@ function gachaScr(res){
 const capOf=c=>55+c.rar*11;
 const upCost=(c,k)=>10+Math.floor((c[k]||0)/10)*6;
 const sellVal=c=>[0,15,40,120,300][c.rar];
-function cardsScr(kind='B',selId=0){
-  const list=SAVE.cards.filter(c=>c.kind===kind).sort((a,b)=>ovr(b)-ovr(a));const sel=cardById(selId)||null;
+function cardsScr(kind='B',selId=0,tf=-1){
+  const list=SAVE.cards.filter(c=>c.kind===kind&&(tf<0||tm(c)===tf)).sort((a,b)=>ovr(b)-ovr(a));const sel=cardById(selId)||null;
   const inTeam=id=>SAVE.lineup.includes(id)||SAVE.pitcher===id;
   let det='';
   if(sel){const keys=sel.kind==='B'?[['meet','ミート'],['power','パワー'],['speed','走力'],['arm','肩'],['field','守備']]:[['vel','球速'],['ctrl','制球'],['brk','変化'],['sta','スタミナ']];
     det=`<div class="pv" id="pv"></div><div class="card r${sel.rar}" style="width:min(94vw,440px)">${cardHTML(sel)}<div class="abd">${sel.abil.map(a=>'★'+ABIL[a].n+': '+ABIL[a].d).join('<br>')||'特殊能力なし'}</div><div style="margin-top:6px">${keys.map(([k,n])=>`<button class="btn" data-a="up" data-k="${k}" style="margin:2px" ${sel[k]>=capOf(sel)||(SAVE.coins||0)<upCost(sel,k)?'disabled':''}>${n}+1 (🪙${upCost(sel,k)})</button>`).join('')}
       ${sel.kind==='P'?sel.pitches.map((p,i)=>`<button class="btn" data-a="pl" data-i="${i}" style="margin:2px" ${p.lv>=5||(SAVE.coins||0)<60+p.lv*40?'disabled':''}>${PT[p.id].n} Lv${p.lv}→${p.lv+1} (🪙${60+p.lv*40})</button>`).join(''):''}
       <button class="btn" data-a="sell" style="margin:2px" ${inTeam(sel.id)?'disabled':''}>売る (🪙${sellVal(sel)})</button></div><div class="small">能力の上限: ${capOf(sel)}</div></div>`;}
-  M(`<div class="head"><h2>選手一覧・育成</h2><div>${money()}</div></div>${seg('kSeg',[['B','打者'],['P','投手']],kind)}${det}
+  M(`<div class="head"><h2>選手一覧・育成</h2><div>${money()}</div></div>${seg('kSeg',[['B','打者'],['P','投手']],kind)}<select id="tf" class="in" style="font-size:14px;letter-spacing:0;padding:6px"><option value="-1">全チーム</option>${TEAMS.map((t,i)=>`<option value="${i}" ${tf===i?'selected':''}>${t.n}</option>`).join('')}</select>${det}
   <div class="grid">${list.map(c=>cardHTML(c,`data-a="sel" data-id="${c.id}"`,c.id===selId?'sel':'')).join('')}</div><button class="mbtn" data-a="back">もどる</button>`);
   if(sel)pvMount($('pv'),sel,SAVE.design);
-  bindSeg('kSeg',v=>cardsScr(v,0));
-  bindMenu({back:title,sel:b=>cardsScr(kind,+b.dataset.id),
-    up:b=>{const k=b.dataset.k;SAVE.coins-=upCost(sel,k);sel[k]++;writeSave();cardsScr(kind,selId);},
-    pl:b=>{const p=sel.pitches[+b.dataset.i];SAVE.coins-=60+p.lv*40;p.lv++;writeSave();cardsScr(kind,selId);},
-    sell:()=>{if(confirm(`${sel.name}を売りますか?`)){SAVE.coins=(SAVE.coins||0)+sellVal(sel);SAVE.cards=SAVE.cards.filter(c=>c.id!==sel.id);writeSave();cardsScr(kind,0);}}});
+  bindSeg('kSeg',v=>cardsScr(v,0,tf));$('tf').addEventListener('change',e=>cardsScr(kind,0,+e.target.value));
+  bindMenu({back:title,sel:b=>cardsScr(kind,+b.dataset.id,tf),
+    up:b=>{const k=b.dataset.k;SAVE.coins-=upCost(sel,k);sel[k]++;writeSave();cardsScr(kind,selId,tf);},
+    pl:b=>{const p=sel.pitches[+b.dataset.i];SAVE.coins-=60+p.lv*40;p.lv++;writeSave();cardsScr(kind,selId,tf);},
+    sell:()=>{if(confirm(`${sel.name}を売りますか?`)){SAVE.coins=(SAVE.coins||0)+sellVal(sel);SAVE.cards=SAVE.cards.filter(c=>c.id!==sel.id);writeSave();cardsScr(kind,0,tf);}}});
 }
 /* ---------- チーム編成 ---------- */
+function comboPanel(){
+  let T;try{T=applyCombos(myTeam());}catch(e){return '';}
+  const cnt=TEAMS.map((t,i)=>[t,[...SAVE.lineup.map(cardById),cardById(SAVE.pitcher)].filter(c=>c&&tm(c)===i).length]).filter(x=>x[1]>0);
+  return `<div class="small" style="width:min(94vw,420px);text-align:left"><b>パーティコンボ</b>(同じチームを揃えると発動!)<br>
+  所属: ${cnt.map(([t,n])=>`<span style="color:${t.c}">●${t.n.replace(/・.*$/,'')}×${n}</span>`).join(' ')}<br>
+  <span style="opacity:.8">チーム3人でLv1(+3)・5人でLv2(+6)・7人でLv3(+9と特殊能力)。他にも 黄金バッテリー/鉄壁の内野陣/韋駄天の外野陣/最強クリーンナップ/切り込み隊/右打線・左打線そろい/スター軍団/フルメンバー</span></div>
+  ${T.combos.length?T.combos.map(c=>`<div class="slot" style="border:2px solid ${c.c};border-style:solid"><b style="color:${c.c}">★${esc(c.n)}</b><br><span style="font-size:11px">${esc(c.d)}</span></div>`).join(''):'<div class="small">発動中のコンボはありません</div>'}`;
+}
 const POS_LAB=['中','遊','二','三','一','左','右','捕','DH'];
 function teamEdit(slot=-1){ // slot: 0-8 打者, 9 投手
   const t=SAVE.lineup.map(cardById),pit=cardById(SAVE.pitcher);
@@ -1370,13 +1443,15 @@ function teamEdit(slot=-1){ // slot: 0-8 打者, 9 投手
   ${seg('dsSeg',[['PRO','プロ (紺×金)'],['HS','高校 (白×紅)']],SAVE.design)}
   ${slot>=0&&(slot===9?pit:t[slot])?`<div class="pv" id="pv"></div><div class="abd" style="width:min(94vw,420px)">${(slot===9?pit:t[slot]).abil.map(a=>'★'+ABIL[a].n+': '+ABIL[a].d).join('<br>')}</div>`:''}
   <div class="slot ${slot===9?'sel':''}" data-a="slot" data-i="9">投手　${pit?esc(pit.name)+'　OVR '+ovr(pit)+' '+handTxt(pit.hand):'—'}</div>
-  ${t.map((c,i)=>`<div class="slot ${slot===i?'sel':''}" data-a="slot" data-i="${i}">${i+1}番 (${POS_LAB[i]})　${c?esc(c.name)+'　OVR '+ovr(c)+' '+handTxt(c.hand)+' '+c.abil.map(a=>ABIL[a].n).join('・'):'—'}</div>`).join('')}
+  ${t.map((c,i)=>`<div class="slot ${slot===i?'sel':''}" data-a="slot" data-i="${i}">${i+1}番 (${POS_JP[SAVE.pos[i]]||'?'})　${c?esc(c.name)+'　OVR '+ovr(c)+' '+handTxt(c.hand)+' '+c.abil.map(a=>ABIL[a].n).join('・'):'—'}</div>`).join('')}
   ${slot>=0?`<div class="small">↓ 入れ替える選手を選んでね</div><div class="grid">${pool.map(c=>cardHTML(c,`data-a="pick" data-id="${c.id}"`,(slot===9?SAVE.pitcher===c.id:SAVE.lineup.includes(c.id))?'sel':'')).join('')}</div>`:''}
-  <button class="mbtn sub" data-a="auto">おまかせ編成</button><button class="mbtn" data-a="back">もどる</button>`);
+  ${slot>=0&&slot<9?`<div class="small">守備位置: <button class="btn" data-a="pm">◀ 上と交換</button> <button class="btn" data-a="pp">下と交換 ▶</button></div>`:''}
+  ${comboPanel()}
+  <button class="mbtn sub" data-a="auto">おまかせ編成<small>能力・コンボを考えて最強の布陣に</small></button><button class="mbtn" data-a="back">もどる</button>`);
   if(slot>=0){const cc=slot===9?pit:t[slot];if(cc)pvMount($('pv'),cc,SAVE.design);}
   $('tn').addEventListener('change',e=>{SAVE.teamName=e.target.value.trim()||'マイチーム';writeSave();});
   bindSeg('dsSeg',v=>{SAVE.design=v;writeSave();});
-  bindMenu({slot:b=>teamEdit(+b.dataset.i),back:()=>{SAVE.teamName=$('tn').value.trim()||'マイチーム';writeSave();title();},auto:()=>{autoTeam(SAVE);writeSave();teamEdit(-1);},
+  bindMenu({pm:()=>{if(slot>0){const p=SAVE.pos;[p[slot],p[slot-1]]=[p[slot-1],p[slot]];writeSave();teamEdit(slot);}},pp:()=>{if(slot<8){const p=SAVE.pos;[p[slot],p[slot+1]]=[p[slot+1],p[slot]];writeSave();teamEdit(slot);}},slot:b=>teamEdit(+b.dataset.i),back:()=>{SAVE.teamName=$('tn').value.trim()||'マイチーム';writeSave();title();},auto:()=>{autoTeam(SAVE);writeSave();teamEdit(-1);},
     pick:b=>{const id=+b.dataset.id;
       if(slot===9)SAVE.pitcher=id;else{const j=SAVE.lineup.indexOf(id);if(j>=0)SAVE.lineup[j]=SAVE.lineup[slot];SAVE.lineup[slot]=id;}
       writeSave();teamEdit(slot);}});
@@ -1430,10 +1505,10 @@ function hostRefresh(){const e=document.querySelector('[data-a="cancel"]');if(e)
   const btn=document.querySelector('[data-a="start"]');if(btn&&NET.players.some(p=>NET.kind==='1v1'?p.deck:true)){btn.disabled=false;btn.textContent='試合開始!';}
   const small=[...document.querySelectorAll('#menu .small')].find(x=>x.textContent.startsWith('参加者'));if(small)small.textContent='参加者: あなた'+NET.players.map(p=>'、'+p.name).join('');}
 function startOnline(kind,inn,stage){
-  const my=myTeam();ME.team=0;
+  const my=applyCombos(myTeam());ME.team=0;
   if(kind==='1v1'){
     const p=NET.players.find(x=>x.deck);if(!p){toast('相手が準備できていません');return;}
-    const d=p.deck;const other={name:d.name||'ゲスト',design:opposite(my.design),lineup:d.lineup,pitcher:d.pitcher};
+    const d=p.deck;const other=applyCombos({name:d.name||'ゲスト',design:opposite(my.design),lineup:d.lineup,pitcher:d.pitcher,pos:d.pos||DEFPOS});
     for(const c of [...other.lineup,other.pitcher])if(c&&c.abil===undefined)c.abil=[];
     p.team=1;p.roles=['bat','pitch','run','field'];ME.roles=new Set(['bat','pitch','run','field']);
     p.conn.send({t:'hello',kind,team:1,roles:p.roles});
@@ -1458,7 +1533,7 @@ async function joinRoom(code){
     const peer=await new Promise((res,rej)=>{const p=new Peer();p.on('open',()=>res(p));p.on('error',e=>rej(e));});NET.peer=peer;
     const conn=peer.connect('dsb-'+code,{reliable:true});NET.hostConn=conn;
     await new Promise((res,rej)=>{conn.on('open',res);conn.on('error',rej);peer.on('error',rej);setTimeout(()=>rej({type:'timeout'}),12000);});
-    const my=myTeam();conn.send({t:'join',name:SAVE.teamName,deck:{name:SAVE.teamName,lineup:my.lineup,pitcher:my.pitcher}});
+    const my=myTeam();conn.send({t:'join',name:SAVE.teamName,deck:{name:SAVE.teamName,lineup:my.lineup,pitcher:my.pitcher,pos:my.pos}});
     conn.on('data',onGuestMsg);
     conn.on('close',()=>{if(!NET.guest)return;NET.guest=false;abortGame();toast('ホストとの接続が切れました',3500);showHUD(false);title();});
     M(`<h2>接続しました!</h2><div class="small">ホストが試合を開始するのを待っています…</div><div class="code">${code}</div><button class="mbtn sub" data-a="back">やめる</button>`);
@@ -1481,7 +1556,7 @@ function onGuestMsg(m){
 /* ---------- 起動 ---------- */
 (async function boot(){
   SAVE=loadSave();if(SAVE.coins===undefined)SAVE.coins=0;writeSave();
-  window.DSS={MODELS,STAD,renderer,scene,ME,myTeam,genCpuTeam,opposite,setTS:v=>{TS=v;},camera,camNow,TW,startGame,startCpuStage,handleEv,SAVE:()=>SAVE,V,E,G,CT,UI,title};
+  window.DSS={step:dt=>{updTW(dt);},CAMV,MODELS,STAD,renderer,scene,ME,myTeam,genCpuTeam,opposite,setTS:v=>{TS=v;},camera,camNow,TW,startGame,startCpuStage,handleEv,SAVE:()=>SAVE,V,E,G,CT,UI,title};
   try{await loadAssets();}catch(e){$('loading').innerHTML='<h1 class="logo">読み込みに失敗しました</h1><div class="small">'+esc(e.message||e)+'</div>';return;}
   buildPark(2);loop();$('loading').classList.add('hide');title();
 })();
