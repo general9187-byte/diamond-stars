@@ -43,7 +43,11 @@ button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
 #bSp{right:max(22px,env(safe-area-inset-right));bottom:calc(max(18px,env(safe-area-inset-bottom)) + min(28vmin,128px));width:min(18vmin,84px);height:min(18vmin,84px);font-size:12px;background:linear-gradient(#a24aff,#5a1ab0);border-color:#e0baff}
 #bSp.ready{animation:glow .5s infinite alternate}
 @keyframes glow{from{box-shadow:0 0 4px #fff}to{box-shadow:0 0 18px 4px #c47aff}}
-#cursorPad{left:0;top:18%;bottom:0;width:62%;z-index:2}
+#cursorPad{left:0;right:0;top:18%;bottom:0;z-index:2}
+.panel>*{flex-shrink:0}
+.pv{width:min(94vw,440px);height:min(44vh,300px);border:3px solid #fff6;border-radius:12px;background:radial-gradient(ellipse at 50% 30%,#2d5aa8,#0b1e3a);position:relative;overflow:hidden;touch-action:none}
+.pv canvas{position:absolute;inset:0;width:100%;height:100%}.pv small{position:absolute;left:8px;bottom:4px;font-size:10px;opacity:.8;font-weight:600}
+.abd{font-size:11px;text-align:left;line-height:1.5;margin-top:4px;font-weight:600}
 #hintBat{left:max(14px,env(safe-area-inset-left));bottom:max(14px,env(safe-area-inset-bottom));font-size:12px;opacity:.85;pointer-events:none;text-shadow:0 1px 3px #000}
 #pitchTypes{left:max(8px,env(safe-area-inset-left));top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:6px;z-index:3}
 #pitchTypes button{min-width:92px;padding:6px 8px;font-size:13px;text-align:left}
@@ -59,7 +63,7 @@ button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
 /* menus */
 .panel{position:fixed;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:10px;padding:14px;overflow:auto;text-align:center;
   background:radial-gradient(ellipse at 50% 0%,#1d4c9acc,#0b1e3af4 70%)}
-.panel.mid{justify-content:center}
+.panel.mid>:first-child{margin-top:auto}.panel.mid>:last-child{margin-bottom:auto}
 .logo{font-size:clamp(26px,7vmin,50px);line-height:1.1;margin:6px 0 0;color:#fff;text-shadow:0 0 18px #4da3ff,0 4px 0 #000;letter-spacing:.04em}
 .logo small{display:block;font-size:12px;color:var(--gold);letter-spacing:.3em;margin-bottom:4px}
 .mbtn{width:min(86vw,360px);padding:12px;font-size:17px;border:3px solid #fff;border-radius:12px;background:linear-gradient(#2a64c8,#143a80);box-shadow:0 4px 0 #000a;letter-spacing:.08em;position:relative}
@@ -125,7 +129,7 @@ input.in{width:min(86vw,320px);padding:10px;font-size:26px;text-align:center;let
   <button class="btn ctl round hide" id="bSp">必殺</button>
   <div class="ctl hide" id="runBtns"><button class="btn" id="bSteal">盗塁</button><button class="btn" id="bGo">GO!</button><button class="btn" id="bBack">帰塁</button></div>
   <div class="ctl hide" id="fieldBtns"></div>
-  <div class="hud hide" id="hintBat">ドラッグでミートカーソルを動かす → ボールが来たらタイミングよくスイング</div>
+  <div class="hud hide" id="hintBat">画面をドラッグでミートカーソル移動 → 指を離した瞬間にスイング!</div>
 </div>
 <div id="menu" class="panel mid"></div>
 <div id="loading" class="panel mid"><h1 class="logo"><small>DIAMOND STARS</small>読み込み中…</h1></div>
@@ -684,12 +688,21 @@ function cpuDecide(role,ti,ctx){
 const canvas=$('c'),zcv=$('zone');
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));
-renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.0;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.0;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x7ab6ea);
 scene.environment=new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(),.04).texture;
 const camera=new THREE.PerspectiveCamera(40,16/9,.1,500);
 const hemi=new THREE.HemisphereLight(0xffffff,0x6a8a50,1.0);scene.add(hemi);
-const sunL=new THREE.DirectionalLight(0xffffff,1.8);sunL.position.set(30,60,40);scene.add(sunL);
+const sunL=new THREE.DirectionalLight(0xffffff,1.8);sunL.position.set(30,60,50);sunL.target.position.set(0,0,6);scene.add(sunL,sunL.target);
+sunL.castShadow=true;sunL.shadow.mapSize.set(2048,2048);Object.assign(sunL.shadow.camera,{left:-48,right:48,top:48,bottom:-48,near:10,far:160});sunL.shadow.bias=-.0004;sunL.shadow.normalBias=.03;
+/* 人物の肌・髪の個性 */
+const SKINS=[0xe2c2aa,0xd1a88e,0xc9967a,0xb98466,0xeacbb4,0xa77558],HAIRS=[0x2a2018,0x524238,0x1a1612,0x6a4a30,0x3a2e26,0x8a6a40,0x14110e];
+function tintModel(g,card){
+  const id=card?card.id||0:0;const h=(id*2654435761>>>0);const sk=SKINS[h%SKINS.length],hr=HAIRS[(h>>>5)%HAIRS.length];
+  g.traverse(o=>{if(!o.isMesh)return;o.castShadow=true;const n=(o.material.name||'');
+    if(/skin/i.test(n)){o.material=o.material.clone();o.material.color.setHex(sk).lerp(new THREE.Color(o.material.userData.dark||sk),0);o.material.roughness=.6;}
+    else if(/hair/i.test(n)){o.material=o.material.clone();o.material.color.setHex(hr);}});
+}
 let gltfRaw=null;const MODELS={},STAD=[];
 function mergeGroup(root,skip){
   root.updateMatrixWorld(true);const T=new THREE.Matrix4().makeTranslation(-root.position.x,-root.position.y,-root.position.z);
@@ -719,26 +732,31 @@ function loadAssets(){
 }
 /* ---------- アクター(選手) ---------- */
 const shadowGeo=new THREE.CircleGeometry(.55,16),shadowMat=new THREE.MeshBasicMaterial({color:0,transparent:true,opacity:.28,depthWrite:false});
-function makeActor(design,role,hand){
+function makeActor(design,role,hand,card){
   const root=new THREE.Group();const poses={};
   const keys=role==='RUNNER'?{READY:`${design}_BATTER_READY_NB`,ACTION:`${design}_BATTER_ACTION_NB`}:role==='FIELDER'?{READY:`${design}_PITCHER_READY`,ACTION:`${design}_PITCHER_ACTION`}:{READY:`${design}_${role}_READY`,ACTION:`${design}_${role}_ACTION`};
-  for(const k in keys){const m=MODELS[keys[k]];if(!m)continue;const g=m.group.clone();if(hand&&hand!==m.hand)g.scale.x*=-1;g.visible=k==='READY';root.add(g);poses[k]=g;}
-  const sh=new THREE.Mesh(shadowGeo,shadowMat);sh.rotation.x=-Math.PI/2;sh.position.y=.03;root.add(sh);
+  for(const k in keys){const m=MODELS[keys[k]];if(!m)continue;const g=m.group.clone();if(hand&&hand!==m.hand)g.scale.x*=-1;g.visible=k==='READY';tintModel(g,card);root.add(g);poses[k]=g;}
+  root.rotation.order='YXZ';
+  if(role==='BATTER')root.traverse(o=>{if(o.isMesh)o.material=o.material.clone();});
   const a={root,poses,pose:'READY',x:0,v:0,yaw:0,role,design,setPose(n){if(!poses[n])return;for(const k in poses)poses[k].visible=k===n;a.pose=n;},place(x,v,yaw){a.x=x;a.v=v;if(yaw!==undefined)a.yaw=yaw;root.position.set(x,0,sceneZ(v));root.rotation.y=a.yaw;},face(tx,tv){a.yaw=Math.atan2(tx-a.x,a.v-tv);root.rotation.y=a.yaw;}};
+  a.fade=v=>{root.traverse(o=>{if(o.isMesh){o.material.transparent=v<1;o.material.opacity=v;o.material.depthWrite=v>=1;}});};
   scene.add(root);return a;
 }
 function killActor(a){if(a&&a.root.parent)a.root.parent.remove(a.root);}
 /* ---------- ボール ---------- */
-const ballMesh=new THREE.Mesh(new THREE.SphereGeometry(.1,14,10),new THREE.MeshStandardMaterial({color:0xffffff,roughness:.5,emissive:0x333333}));ballMesh.visible=false;scene.add(ballMesh);
+const ballTex=(()=>{const c=document.createElement('canvas');c.width=128;c.height=64;const x=c.getContext('2d');x.fillStyle='#f6f3ea';x.fillRect(0,0,128,64);x.strokeStyle='#c42a2a';x.lineWidth=2.5;
+  for(const cx of [32,96]){x.beginPath();x.arc(cx,32,22,-1.2,1.2);x.stroke();x.beginPath();x.arc(cx+(cx<64?-30:30),32,22,Math.PI-1.2,Math.PI+1.2);x.stroke();for(let i=-5;i<=5;i++){const a=i*.2;x.beginPath();x.moveTo(cx+Math.cos(a)*22-4,32+Math.sin(a)*22);x.lineTo(cx+Math.cos(a)*22+4,32+Math.sin(a)*22);x.stroke();}}
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
+const ballMesh=new THREE.Mesh(new THREE.SphereGeometry(.1,18,14),new THREE.MeshStandardMaterial({map:ballTex,roughness:.55}));ballMesh.castShadow=true;ballMesh.visible=false;scene.add(ballMesh);
 const ballShadow=new THREE.Mesh(new THREE.CircleGeometry(.22,12),new THREE.MeshBasicMaterial({color:0,transparent:true,opacity:.4,depthWrite:false}));ballShadow.rotation.x=-Math.PI/2;ballShadow.visible=false;scene.add(ballShadow);
 const trail=[];for(let i=0;i<14;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(.07,6,5),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0}));m.visible=false;scene.add(m);trail.push(m);}
-function setBall(x,y,v,vis=true){ballMesh.visible=vis;ballMesh.position.set(x,y,sceneZ(v));ballShadow.visible=vis&&y>.15;ballShadow.position.set(x,.06,sceneZ(v));const s=clamp(1-y*.012,.4,1);ballShadow.scale.setScalar(s);}
+function setBall(x,y,v,vis=true){ballMesh.rotation.x+=.5;ballMesh.rotation.z+=.3;ballMesh.visible=vis;ballMesh.position.set(x,y,sceneZ(v));ballShadow.visible=vis&&y>.15;ballShadow.position.set(x,.06,sceneZ(v));const s=clamp(1-y*.012,.4,1);ballShadow.scale.setScalar(s);}
 /* ---------- ワールド構築 ---------- */
 const V={park:-1,stadium:null,actors:{},fielders:{},runners:new Map(),batter:null,pitcher:null,catcher:null,teams:null,off:0,def:1,view:'bat',mode:'idle',bc:null,pitchStart:0,pitch:null,swingShown:false,st:null,local:{pitch:[],bat:[],run:[],field:[]},lookT:new THREE.Vector3(0,1,8),myTeam:0};
 function buildPark(i){
   if(V.park===i)return;if(V.stadium)scene.remove(V.stadium);V.park=i;
-  V.stadium=STAD[i].clone();scene.add(V.stadium);
-  scene.background=new THREE.Color(i===1?0x1a2438:0x7ab6ea);hemi.intensity=i===1?.9:1.0;sunL.intensity=i===1?1.2:1.8;
+  V.stadium=STAD[i].clone();V.stadium.traverse(o=>{if(o.isMesh)o.receiveShadow=true;});scene.add(V.stadium);
+  scene.background=new THREE.Color(i===1?0x1a2438:0x7ab6ea);scene.fog=i===1?null:new THREE.Fog(0x9cc6ec,170,520);hemi.intensity=i===1?.9:1.0;sunL.intensity=i===1?1.2:1.8;
 }
 function setupHalf(off){
   const T=V.teams;V.off=off;V.def=1-off;
@@ -747,14 +765,14 @@ function setupHalf(off){
   for(const k in V.fielders)killActor(V.fielders[k]);V.fielders={};
   for(const [id,a] of V.runners)killActor(a);V.runners.clear();
   const P={hand:T[V.def].ph||"R"};
-  V.pitcher=makeActor(dd,'PITCHER',P.hand);V.pitcher.place(0,22.6,0);
+  V.pitcher=makeActor(dd,'PITCHER',P.hand,{id:V.teams[V.def].pid||7});V.pitcher.place(0,22.6,0);
   V.catcher=makeActor(dd,'CATCHER','R');V.catcher.place(0,-1.9,Math.PI);
-  for(const k of ['B1','B2','B3','SS','LF','CF','RF']){const a=makeActor(dd,'FIELDER',k==='B1'?'R':pick(['R','R','L']));a.place(FPOS[k].x,FPOS[k].v,0);a.face(0,12);V.fielders[k]=a;}
+  for(const k of ['B1','B2','B3','SS','LF','CF','RF']){const a=makeActor(dd,'FIELDER',k==='B1'?'R':pick(['R','R','L']),{id:(V.teams[V.def].fid||[])[k]||Math.floor(Math.random()*9999)});a.place(FPOS[k].x,FPOS[k].v,0);a.face(0,12);V.fielders[k]=a;}
   V.fielders.P=V.pitcher;V.fielders.C=V.catcher;
 }
 function setBatter(card,pitcherHand){
   killActor(V.batter);const hand=card.hand==='S'?(pitcherHand==='R'?'L':'R'):card.hand;
-  const a=makeActor(V.teams[V.off].design,'BATTER',hand);a.place(hand==='R'?-1.05:1.05,-.1,Math.PI);a.batHand=hand;V.batter=a;
+  const a=makeActor(V.teams[V.off].design,'BATTER',hand,card);a.place(hand==='R'?-1.05:1.05,-.1,Math.PI);a.batHand=hand;V.batter=a;
 }
 /* ---------- ティーン管理 ---------- */
 const TW=[];
@@ -763,7 +781,7 @@ function updTW(dt){for(let i=TW.length-1;i>=0;i--){const a=TW[i];a.t+=dt;if(a.t<
 const ease=t=>t*t*(3-2*t);
 function moveActor(a,x1,v1,dur,delay=0,face=true,run=true){
   const x0=a.x,v0=a.v;const d=hy(x1-x0,v1-v0);
-  tw(dur,k=>{const e=k;a.place(lerp(x0,x1,e),lerp(v0,v1,e));if(face&&d>.5)a.face(x1,v1);if(run)a.root.position.y=Math.abs(Math.sin(k*dur*9))*.12*(d>1?1:0);a.root.rotation.z=run&&d>1?Math.sin(k*dur*9)*.05:0;},()=>{a.root.position.y=0;a.root.rotation.z=0;},delay);
+  tw(dur,k=>{const e=k;a.place(lerp(x0,x1,e),lerp(v0,v1,e));if(face&&d>.5)a.face(x1,v1);if(run)a.root.position.y=Math.abs(Math.sin(k*dur*9))*.12*(d>1?1:0);a.root.rotation.z=run&&d>1?Math.sin(k*dur*9)*.05:0;a.root.rotation.x=run&&d>1?.2:0;},()=>{a.root.position.y=0;a.root.rotation.z=0;a.root.rotation.x=0;},delay);
 }
 /* ---------- カメラ ---------- */
 const CAMV={
@@ -778,7 +796,7 @@ function setCamMode(m){camMode=m;camFollowBall=false;}
 function updCamera(dt){
   const asp=innerWidth/innerHeight;camera.aspect=asp;
   const def=CAMV[camMode]||CAMV.bat;let tp=def.p,tl=def.l,tf=def.fov;
-  if(camMode==='bat'&&V.batter)tp=[-Math.sign(V.batter.x||1)*.9,tp[1],tp[2]];
+  if(camMode==='bat'&&V.batter)tp=[-Math.sign(V.batter.x||1)*1.9,tp[1]+.2,tp[2]];
   if(camFollowBall&&ballMesh.visible){const b=ballMesh.position;tl=[b.x*.8,Math.max(.6,b.y*.5),b.z];tp=[b.x*.25,Math.max(11,b.y*.5+10),Math.min(40,b.z+22)];tf=52;}
   const k=Math.min(1,dt*(camMode==='bat'||camMode==='pitch'?6:3.2));
   camNow.p.x=lerp(camNow.p.x,tp[0],k);camNow.p.y=lerp(camNow.p.y,tp[1],k);camNow.p.z=lerp(camNow.p.z,tp[2],k);
@@ -789,8 +807,8 @@ function updCamera(dt){
 /* ---------- 投球・打撃アニメ ---------- */
 function showPitch(ev){
   const p=ev.pitch;V.pitch=p;V.pitchStart=performance.now();V.swingShown=false;V.mode='pitching';
-  const P=V.pitcher;if(P){tw(.26,k=>{P.setPose(k>.55?'ACTION':'READY');},null,.1);
-    tw(.45,k=>{P.root.position.z=sceneZ(22.6)-k*.5;},null,.05);}
+  const P=V.pitcher;if(P){const z0=sceneZ(22.6);
+    tw(.42,k=>{const b=k<.45?ease(k/.45):1-ease((k-.45)/.55);P.root.position.z=z0-.35*b+(k>.45?1.3*ease((k-.45)/.55):0);P.root.rotation.x=-.22*b+(k>.6?.28*ease((k-.6)/.4):0);P.setPose(k>.62?'ACTION':'READY');},()=>{P.root.rotation.x=.06;},.02);}
   // ボール飛行
   const t0=performance.now();V.bc={type:'pitch',start:t0+REL*1000,p};
   tw(.01,()=>{},()=>{},0);
@@ -820,7 +838,7 @@ function ballPathAt(path,t){
 }
 function showContact(ev){
   const b=ev.ball;V.contact=ev;V.contactT0=performance.now();V.bc={type:'path',start:V.contactT0,ball:b,cut:null,hold:null,throws:[],cont:true};
-  V.mode='ball';camFollowBall=true;camMode='high';if(V.catcher)V.catcher.root.visible=true;
+  V.mode='ball';camFollowBall=true;if(V.batter&&V.batter.fade)V.batter.fade(1);camMode='high';if(V.catcher)V.catcher.root.visible=true;
   sfx('crack');if(ev.kind==='inplay'&&ev.ev>115)shakeCam(.3);
   // 打者が走り出す(インプレー時のみ)
   if(ev.kind==='inplay'){const B=V.batter;if(B){B.setPose('READY');}}
@@ -847,7 +865,7 @@ function hideTrail(){for(const m of trail)m.visible=false;}
 /* ---------- プレー(守備・走塁)アニメ ---------- */
 function actorForRunner(id,design,startBase){
   let a=V.runners.get(id);
-  if(!a){a=makeActor(design,'RUNNER',null);const bp=BASEP[startBase%4];a.place(bp.x,bp.v,0);V.runners.set(id,a);}
+  if(!a){a=makeActor(design,'RUNNER',null,{id:id});const bp=BASEP[startBase%4];a.place(bp.x,bp.v,0);V.runners.set(id,a);}
   return a;
 }
 function showPlay(ev){
@@ -872,7 +890,7 @@ function showPlay(ev){
   for(const m of plan.moves){
     const a=actorForRunner(m.card,od,m.legs[0].from);
     for(const lg of m.legs){const p0=BASEP[lg.from%4],p1=BASEP[lg.to%4];const dur=Math.max(.05,lg.t1-lg.t0);const delay=Math.max(0,lg.t0-el);
-      tw(dur,k=>{a.place(lerp(p0.x,p1.x,k),lerp(p0.v,p1.v,k));a.face(p1.x,p1.v);a.root.position.y=Math.abs(Math.sin(k*dur*9))*.12;a.root.rotation.z=Math.sin(k*dur*9)*.05;},()=>{a.root.position.y=0;a.root.rotation.z=0;
+      tw(dur,k=>{a.place(lerp(p0.x,p1.x,k),lerp(p0.v,p1.v,k));a.face(p1.x,p1.v);a.root.position.y=Math.abs(Math.sin(k*dur*9))*.12;a.root.rotation.z=Math.sin(k*dur*9)*.05;a.root.rotation.x=.2;},()=>{a.root.position.y=0;a.root.rotation.z=0;a.root.rotation.x=0;
         if(lg.out){tw(.5,kk=>{a.root.scale.setScalar(1-kk*.0);a.root.position.y=0;},()=>{killActor(a);V.runners.delete(m.card);},.35);}
         else if(lg.to>=4){tw(.4,()=>{},()=>{killActor(a);V.runners.delete(m.card);},.2);}},delay);}
   }
@@ -880,11 +898,11 @@ function showPlay(ev){
 }
 function syncBases(st){
   if(!st||!V.teams)return;const od=V.teams[V.off].design;const ids=new Set();
-  st.bases.forEach((b,i)=>{if(!b)return;ids.add(b.id);let a=V.runners.get(b.id);if(!a){a=makeActor(od,'RUNNER',null);V.runners.set(b.id,a);}const bp=BASEP[i+1];if(!a.moving)a.place(bp.x,bp.v,0);});
+  st.bases.forEach((b,i)=>{if(!b)return;ids.add(b.id);let a=V.runners.get(b.id);if(!a){a=makeActor(od,'RUNNER',null,{id:b.id});V.runners.set(b.id,a);}const bp=BASEP[i+1];if(!a.moving)a.place(bp.x,bp.v,0);});
   for(const [id,a] of V.runners){if(!ids.has(id)&&!TW.some(()=>false)){/* 走塁中でなければ除去 */ if(!a.keep){killActor(a);V.runners.delete(id);}}}
 }
 function resetFieldPositions(){
-  for(const k in V.fielders){const a=V.fielders[k];if(k==='P'){a.place(0,22.6,0);a.setPose('READY');continue;}if(k==='C'){a.place(0,-1.9,Math.PI);a.setPose('READY');continue;}
+  for(const k in V.fielders){const a=V.fielders[k];a.root.rotation.x=0;if(k==='P'){a.place(0,22.6,0);a.setPose('READY');continue;}if(k==='C'){a.place(0,-1.9,Math.PI);a.setPose('READY');continue;}
     a.place(FPOS[k].x,FPOS[k].v,0);a.face(0,12);a.setPose('READY');}
   if(V.batter)V.batter.root.visible=true;
 }
@@ -994,7 +1012,7 @@ $('bBack').addEventListener('click',()=>{$('bSteal').classList.remove('on');$('b
 /* ---------- 打撃UI ---------- */
 function batUIOn(ctx){
   UI.mode='bat';UI.cursor.u=UI.cursor.u||0;UI.cursor.w=UI.cursor.w||0;
-  for(const id of ['bSwing','bPower'])$(id).classList.remove('hide');$('cursorPad').classList.remove('hide');$('hintBat').classList.remove('hide');
+  $('bPower').classList.remove('hide');$('cursorPad').classList.remove('hide');$('hintBat').classList.remove('hide');
   UI.power=false;$('bPower').innerHTML='パワー<br>OFF';$('bPower').classList.remove('on');
   CT.armUlt=false;$('bSp').classList.add('hide');$('bSp').classList.remove('on');
 }
@@ -1020,7 +1038,7 @@ $('bSp').addEventListener('click',()=>{if(!UI.mode)return;CT.armUlt=!CT.armUlt;$
   pad.addEventListener('pointerdown',e=>{last={x:e.clientX,y:e.clientY};try{pad.setPointerCapture(e.pointerId);}catch(_){};});
   pad.addEventListener('pointermove',e=>{if(!last||UI.mode!=='bat')return;const r=zr;if(!r||!r.w)return;
     UI.cursor.u=clamp(UI.cursor.u+(e.clientX-last.x)/(Math.abs(r.w)/2),-1.9,1.9);UI.cursor.w=clamp(UI.cursor.w-(e.clientY-last.y)/(Math.abs(r.h)/2),-1.9,1.9);last={x:e.clientX,y:e.clientY};});
-  const up=()=>{last=null;};pad.addEventListener('pointerup',up);pad.addEventListener('pointercancel',up);
+  pad.addEventListener('pointerup',()=>{const had=!!last;last=null;if(had&&UI.mode==='bat'&&CT.swing)CT.swing();});pad.addEventListener('pointercancel',()=>{last=null;});
 })();
 /* ---------- 投球UI ---------- */
 function layoutWidget(){const s=Math.min(210,innerWidth*.46,innerHeight*.4);UI.widget={s,x:innerWidth-s*1.12-8,y:Math.max(96,innerHeight*.17)};
@@ -1050,7 +1068,7 @@ function askPitch(ctx,done){
   ap.addEventListener('pointerdown',CT.adown);ap.addEventListener('pointermove',CT.amove);ap.addEventListener('pointerup',CT.aup);
   let fin=false;const finish=a=>{if(fin)return;fin=true;CT.cleanup();done(a);};
   CT.cleanup=()=>{tp.removeEventListener('pointerdown',CT.tdown);tp.removeEventListener('pointerup',CT.tup);ap.removeEventListener('pointerdown',CT.adown);ap.removeEventListener('pointermove',CT.amove);ap.removeEventListener('pointerup',CT.aup);
-    for(const id of ['pitchTypes','aimPad','throwPad','bSp','hintBat'])$(id).classList.add('hide');UI.mode=null;UI.widgetOn=false;$('bSp').textContent='必殺';$('hintBat').textContent='ドラッグでミートカーソルを動かす → ボールが来たらタイミングよくスイング';fin=true;};
+    for(const id of ['pitchTypes','aimPad','throwPad','bSp','hintBat'])$(id).classList.add('hide');UI.mode=null;UI.widgetOn=false;$('bSp').textContent='必殺';$('hintBat').textContent='画面をドラッグでミートカーソル移動 → 指を離した瞬間にスイング!';fin=true;};
   CT.armSp=()=>{CT.armUlt=!CT.armUlt;};
 }
 /* ---------- 問い合わせフック ---------- */
@@ -1227,6 +1245,44 @@ function stageSel(){
   let inn=G.innings||5;bindSeg('inSeg',v=>{inn=+v;G.innings=inn;});
   bindMenu({back:title,go:b=>startCpuStage(+b.dataset.i,inn)});
 }
+
+/* ---------- 選手3Dビューア ---------- */
+const PV={r:null,scene:null,cam:null,model:null,ring:null,el:null,ang:.5,drag:null,pose:'READY',card:null,design:'PRO',raf:0};
+function pvInit(){
+  const r=new THREE.WebGLRenderer({antialias:true,alpha:true});r.setPixelRatio(Math.min(devicePixelRatio,2));r.toneMapping=THREE.ACESFilmicToneMapping;r.shadowMap.enabled=true;r.shadowMap.type=THREE.PCFSoftShadowMap;
+  const sc=new THREE.Scene();sc.environment=new THREE.PMREMGenerator(r).fromScene(new RoomEnvironment(),.04).texture;
+  sc.add(new THREE.HemisphereLight(0xffffff,0x334466,.9));
+  const dl=new THREE.DirectionalLight(0xffffff,2.2);dl.position.set(3,6,4);dl.castShadow=true;dl.shadow.mapSize.set(1024,1024);Object.assign(dl.shadow.camera,{left:-3,right:3,top:3,bottom:-3,near:1,far:20});dl.shadow.bias=-.0005;sc.add(dl);
+  const rim=new THREE.DirectionalLight(0x88b8ff,1.2);rim.position.set(-4,3,-4);sc.add(rim);
+  const fl=new THREE.Mesh(new THREE.CircleGeometry(1.6,40),new THREE.MeshStandardMaterial({color:0x1d2f55,roughness:.8}));fl.rotation.x=-Math.PI/2;fl.receiveShadow=true;sc.add(fl);
+  const ring=new THREE.Mesh(new THREE.RingGeometry(1.45,1.6,48),new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.y=.01;sc.add(ring);
+  Object.assign(PV,{r,scene:sc,ring,cam:new THREE.PerspectiveCamera(30,1,.1,50)});
+  const cv=r.domElement;
+  cv.addEventListener('pointerdown',e=>{PV.drag={x:e.clientX,m:false};try{cv.setPointerCapture(e.pointerId);}catch(_){}});
+  cv.addEventListener('pointermove',e=>{if(!PV.drag)return;const dx=e.clientX-PV.drag.x;if(Math.abs(dx)>2)PV.drag.m=true;PV.ang+=dx*.012;PV.drag.x=e.clientX;});
+  cv.addEventListener('pointerup',()=>{if(PV.drag&&!PV.drag.m)pvPose(PV.pose==='READY'?'ACTION':'READY');PV.drag=null;});
+}
+function pvPose(p){PV.pose=p;if(PV.model)for(const k in PV.model.poses)PV.model.poses[k].visible=k===p;}
+function pvMount(el,card,design){
+  if(!el||!card)return;if(!PV.r)pvInit();
+  PV.el=el;PV.card=card;PV.design=design;PV.pose='READY';
+  if(PV.model){PV.scene.remove(PV.model.root);PV.model=null;}
+  const base=`${design}_${card.kind==='B'?'BATTER':'PITCHER'}`,root=new THREE.Group(),poses={};
+  for(const p of ['READY','ACTION']){const m=MODELS[`${base}_${p}`];if(!m)continue;const g=m.group.clone();const hand=card.hand==='S'?'R':card.hand;if(hand!==m.hand)g.scale.x*=-1;tintModel(g,card);g.visible=p==='READY';root.add(g);poses[p]=g;}
+  PV.scene.add(root);PV.model={root,poses};
+  PV.ring.material.color.set([0,0x9aa4b8,0x4aa8ff,0xc47aff,0xffd23a][card.rar]);
+  el.innerHTML='';el.appendChild(PV.r.domElement);const sm=document.createElement('small');sm.textContent='ドラッグで回転 / タップでポーズ切替';el.appendChild(sm);
+  pvResize();cancelAnimationFrame(PV.raf);pvLoop();
+}
+function pvResize(){if(!PV.el)return;const w=PV.el.clientWidth||300,h=PV.el.clientHeight||260;PV.r.setSize(w,h,false);PV.cam.aspect=w/h;PV.cam.fov=w/h<.8?44:30;PV.cam.updateProjectionMatrix();}
+function pvLoop(){
+  if(!PV.el||!PV.el.isConnected){return;}
+  PV.raf=requestAnimationFrame(pvLoop);if(!PV.drag)PV.ang+=.008;
+  const m=PV.model.root;m.rotation.y=PV.ang;
+  const t=performance.now()/1000;m.scale.y=1+Math.sin(t*2)*.006;
+  PV.cam.position.set(0,1.45,5.4);PV.cam.lookAt(0,.95,0);PV.r.render(PV.scene,PV.cam);
+}
+addEventListener('resize',()=>{if(PV.el&&PV.el.isConnected)pvResize();});
 /* ---------- ガチャ ---------- */
 function pullOne(minRar=0){
   const r=Math.random();let rar=r<.03?4:r<.17?3:r<.50?2:1;if(rar<minRar)rar=minRar;
@@ -1235,13 +1291,14 @@ function pullOne(minRar=0){
 function gachaScr(res){
   M(`<div class="head"><h2>選手ガチャ</h2><div>${money()}</div></div>
   <div class="small">N 50% / R 33% / SR 14% / SSR 3%　　1回=🎫1　10連=🎫10 (SR以上1枚確定)</div>
-  ${res?`<div class="gachaRes">${res.map((c,i)=>cardHTML(c,`style="animation-delay:${i*.12}s"`)).join('')}</div>`:''}
+  ${res?`<div class="pv" id="pv"></div><div class="small">カードをタップで3D表示</div><div class="gachaRes">${res.map((c,i)=>cardHTML(c,`data-a="pvsel" data-i="${i}" style="animation-delay:${i*.12}s"`)).join('')}</div>`:''}
   <button class="mbtn gold" data-a="p1" ${SAVE.tickets<1?'disabled':''}>1回ひく<small>🎫1</small></button>
   <button class="mbtn gold" data-a="p10" ${SAVE.tickets<10?'disabled':''}>10連ひく<small>🎫10</small></button>
   <button class="mbtn sub" data-a="ex" ${(SAVE.coins||0)<300?'disabled':''}>🪙300 → 🎫1 に交換</button>
   <button class="mbtn" data-a="back">もどる</button>`);
   const pull=n=>{SAVE.tickets-=n;const out=[];for(let i=0;i<n;i++)out.push(pullOne(n===10&&i===9&&!out.some(c=>c.rar>=3)?3:0));SAVE.cards.push(...out);writeSave();sfx(out.some(c=>c.rar===4)?'good':'ui');gachaScr(out);};
-  bindMenu({p1:()=>pull(1),p10:()=>pull(10),ex:()=>{SAVE.coins-=300;SAVE.tickets++;writeSave();gachaScr();},back:title});
+  if(res){const best=res.slice().sort((a,b)=>b.rar-a.rar)[0];pvMount($('pv'),best,SAVE.design);}
+  bindMenu({pvsel:b=>{pvMount($('pv'),res[+b.dataset.i],SAVE.design);},p1:()=>pull(1),p10:()=>pull(10),ex:()=>{SAVE.coins-=300;SAVE.tickets++;writeSave();gachaScr();},back:title});
 }
 /* ---------- 選手一覧・育成 ---------- */
 const capOf=c=>55+c.rar*11;
@@ -1252,11 +1309,12 @@ function cardsScr(kind='B',selId=0){
   const inTeam=id=>SAVE.lineup.includes(id)||SAVE.pitcher===id;
   let det='';
   if(sel){const keys=sel.kind==='B'?[['meet','ミート'],['power','パワー'],['speed','走力'],['arm','肩'],['field','守備']]:[['vel','球速'],['ctrl','制球'],['brk','変化'],['sta','スタミナ']];
-    det=`<div class="card r${sel.rar}" style="width:min(94vw,440px)">${cardHTML(sel)}<div style="margin-top:6px">${keys.map(([k,n])=>`<button class="btn" data-a="up" data-k="${k}" style="margin:2px" ${sel[k]>=capOf(sel)||(SAVE.coins||0)<upCost(sel,k)?'disabled':''}>${n}+1 (🪙${upCost(sel,k)})</button>`).join('')}
+    det=`<div class="pv" id="pv"></div><div class="card r${sel.rar}" style="width:min(94vw,440px)">${cardHTML(sel)}<div class="abd">${sel.abil.map(a=>'★'+ABIL[a].n+': '+ABIL[a].d).join('<br>')||'特殊能力なし'}</div><div style="margin-top:6px">${keys.map(([k,n])=>`<button class="btn" data-a="up" data-k="${k}" style="margin:2px" ${sel[k]>=capOf(sel)||(SAVE.coins||0)<upCost(sel,k)?'disabled':''}>${n}+1 (🪙${upCost(sel,k)})</button>`).join('')}
       ${sel.kind==='P'?sel.pitches.map((p,i)=>`<button class="btn" data-a="pl" data-i="${i}" style="margin:2px" ${p.lv>=5||(SAVE.coins||0)<60+p.lv*40?'disabled':''}>${PT[p.id].n} Lv${p.lv}→${p.lv+1} (🪙${60+p.lv*40})</button>`).join(''):''}
       <button class="btn" data-a="sell" style="margin:2px" ${inTeam(sel.id)?'disabled':''}>売る (🪙${sellVal(sel)})</button></div><div class="small">能力の上限: ${capOf(sel)}</div></div>`;}
   M(`<div class="head"><h2>選手一覧・育成</h2><div>${money()}</div></div>${seg('kSeg',[['B','打者'],['P','投手']],kind)}${det}
   <div class="grid">${list.map(c=>cardHTML(c,`data-a="sel" data-id="${c.id}"`,c.id===selId?'sel':'')).join('')}</div><button class="mbtn" data-a="back">もどる</button>`);
+  if(sel)pvMount($('pv'),sel,SAVE.design);
   bindSeg('kSeg',v=>cardsScr(v,0));
   bindMenu({back:title,sel:b=>cardsScr(kind,+b.dataset.id),
     up:b=>{const k=b.dataset.k;SAVE.coins-=upCost(sel,k);sel[k]++;writeSave();cardsScr(kind,selId);},
@@ -1271,10 +1329,12 @@ function teamEdit(slot=-1){ // slot: 0-8 打者, 9 投手
   M(`<div class="head"><h2>チーム編成</h2><div>${money()}</div></div>
   <input class="in" id="tn" value="${esc(SAVE.teamName)}" maxlength="8" style="font-size:18px;letter-spacing:0;text-transform:none">
   ${seg('dsSeg',[['PRO','プロ (紺×金)'],['HS','高校 (白×紅)']],SAVE.design)}
+  ${slot>=0&&(slot===9?pit:t[slot])?`<div class="pv" id="pv"></div><div class="abd" style="width:min(94vw,420px)">${(slot===9?pit:t[slot]).abil.map(a=>'★'+ABIL[a].n+': '+ABIL[a].d).join('<br>')}</div>`:''}
   <div class="slot ${slot===9?'sel':''}" data-a="slot" data-i="9">投手　${pit?esc(pit.name)+'　OVR '+ovr(pit)+' '+handTxt(pit.hand):'—'}</div>
   ${t.map((c,i)=>`<div class="slot ${slot===i?'sel':''}" data-a="slot" data-i="${i}">${i+1}番 (${POS_LAB[i]})　${c?esc(c.name)+'　OVR '+ovr(c)+' '+handTxt(c.hand)+' '+c.abil.map(a=>ABIL[a].n).join('・'):'—'}</div>`).join('')}
   ${slot>=0?`<div class="small">↓ 入れ替える選手を選んでね</div><div class="grid">${pool.map(c=>cardHTML(c,`data-a="pick" data-id="${c.id}"`,(slot===9?SAVE.pitcher===c.id:SAVE.lineup.includes(c.id))?'sel':'')).join('')}</div>`:''}
   <button class="mbtn sub" data-a="auto">おまかせ編成</button><button class="mbtn" data-a="back">もどる</button>`);
+  if(slot>=0){const cc=slot===9?pit:t[slot];if(cc)pvMount($('pv'),cc,SAVE.design);}
   $('tn').addEventListener('change',e=>{SAVE.teamName=e.target.value.trim()||'マイチーム';writeSave();});
   bindSeg('dsSeg',v=>{SAVE.design=v;writeSave();});
   bindMenu({slot:b=>teamEdit(+b.dataset.i),back:()=>{SAVE.teamName=$('tn').value.trim()||'マイチーム';writeSave();title();},auto:()=>{autoTeam(SAVE);writeSave();teamEdit(-1);},
@@ -1382,7 +1442,7 @@ function onGuestMsg(m){
 /* ---------- 起動 ---------- */
 (async function boot(){
   SAVE=loadSave();if(SAVE.coins===undefined)SAVE.coins=0;writeSave();
-  window.DSS={ME,myTeam,genCpuTeam,opposite,setTS:v=>{TS=v;},camera,camNow,TW,startGame,startCpuStage,handleEv,SAVE:()=>SAVE,V,E,G,CT,UI,title};
+  window.DSS={MODELS,STAD,renderer,scene,ME,myTeam,genCpuTeam,opposite,setTS:v=>{TS=v;},camera,camNow,TW,startGame,startCpuStage,handleEv,SAVE:()=>SAVE,V,E,G,CT,UI,title};
   try{await loadAssets();}catch(e){$('loading').innerHTML='<h1 class="logo">読み込みに失敗しました</h1><div class="small">'+esc(e.message||e)+'</div>';return;}
   buildPark(2);loop();$('loading').classList.add('hide');title();
 })();
