@@ -140,7 +140,7 @@ input.in{width:min(86vw,320px);padding:10px;font-size:26px;text-align:center;let
 
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
+import {mergeGeometries,toCreasedNormals} from 'three/addons/utils/BufferGeometryUtils.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 
 /* ============================================================
@@ -717,6 +717,11 @@ function mergeGroup(root,skip){
   for(const [m,list] of buckets){const mg=mergeGeometries(list,false);if(mg){const mesh=new THREE.Mesh(mg,m);out.add(mesh);}}
   return out;
 }
+function smoothModel(g){
+  g.children.forEach(m=>{try{m.geometry=toCreasedNormals(m.geometry,.9);}catch(e){}
+    const mt=m.material;if(mt){mt.metalness=Math.min(mt.metalness||0,.08);mt.roughness=/skin/i.test(mt.name)?.62:/hair/i.test(mt.name)?.55:Math.max(.55,mt.roughness||.7);mt.envMapIntensity=.85;}});
+  return g;
+}
 function loadAssets(){
   return new Promise((res,rej)=>{
     new GLTFLoader().load('park.glb',g=>{
@@ -725,8 +730,8 @@ function loadAssets(){
       const cat=g.scenes[3];
       for(const n of cat.children){const nm=n.userData.name||n.name;const mm=nm.match(/^(HS|PRO)_(PITCHER|BATTER|CATCHER)_(READY|ACTION)_(RIGHT|LEFT)_CATALOG/);if(!mm)continue;
         const key=`${mm[1]}_${mm[2]}_${mm[3]}`;const hand=mm[4]==='RIGHT'?'R':'L';
-        MODELS[key]={group:mergeGroup(n),hand};
-        if(mm[2]==='BATTER')MODELS[key+'_NB']={group:mergeGroup(n,o=>/maple bat|bat grip/.test(o.userData.name||o.name)),hand};}
+        MODELS[key]={group:smoothModel(mergeGroup(n)),hand};
+        if(mm[2]==='BATTER')MODELS[key+'_NB']={group:smoothModel(mergeGroup(n,o=>/maple bat|bat grip/.test(o.userData.name||o.name))),hand};}
       res();},undefined,rej);
   });
 }
@@ -781,7 +786,8 @@ function updTW(dt){for(let i=TW.length-1;i>=0;i--){const a=TW[i];a.t+=dt;if(a.t<
 const ease=t=>t*t*(3-2*t);
 function moveActor(a,x1,v1,dur,delay=0,face=true,run=true){
   const x0=a.x,v0=a.v;const d=hy(x1-x0,v1-v0);
-  tw(dur,k=>{const e=k;a.place(lerp(x0,x1,e),lerp(v0,v1,e));if(face&&d>.5)a.face(x1,v1);if(run)a.root.position.y=Math.abs(Math.sin(k*dur*9))*.12*(d>1?1:0);a.root.rotation.z=run&&d>1?Math.sin(k*dur*9)*.05:0;a.root.rotation.x=run&&d>1?.2:0;},()=>{a.root.position.y=0;a.root.rotation.z=0;a.root.rotation.x=0;},delay);
+  tw(dur,k=>{a.place(lerp(x0,x1,k),lerp(v0,v1,k));if(face&&d>.5)a.face(x1,v1);const mv=run&&d>1;const ph=k*dur*11;
+    a.root.position.y=mv?Math.abs(Math.sin(ph))*.14:0;a.root.rotation.z=mv?Math.sin(ph)*.07:0;a.root.rotation.x=mv?.24:0;a.root.rotation.y=a.yaw+(mv?Math.sin(ph)*.12:0);},()=>{a.root.position.y=0;a.root.rotation.z=0;a.root.rotation.x=0;a.root.rotation.y=a.yaw;},delay);
 }
 /* ---------- カメラ ---------- */
 const CAMV={
@@ -797,7 +803,7 @@ function updCamera(dt){
   const asp=innerWidth/innerHeight;camera.aspect=asp;
   const def=CAMV[camMode]||CAMV.bat;let tp=def.p,tl=def.l,tf=def.fov;
   if(camMode==='bat'&&V.batter)tp=[-Math.sign(V.batter.x||1)*1.9,tp[1]+.2,tp[2]];
-  if(camFollowBall&&ballMesh.visible){const b=ballMesh.position;tl=[b.x*.8,Math.max(.6,b.y*.5),b.z];tp=[b.x*.25,Math.max(11,b.y*.5+10),Math.min(40,b.z+22)];tf=52;}
+  if(camFollowBall&&ballMesh.visible){const b=ballMesh.position;tl=[b.x*.8,Math.max(.6,b.y*.5),b.z];tp=[b.x*.3,Math.max(13,b.y*.5+11),Math.min(46,b.z+28)];tf=50;}
   const k=Math.min(1,dt*(camMode==='bat'||camMode==='pitch'?6:3.2));
   camNow.p.x=lerp(camNow.p.x,tp[0],k);camNow.p.y=lerp(camNow.p.y,tp[1],k);camNow.p.z=lerp(camNow.p.z,tp[2],k);
   camNow.l.x=lerp(camNow.l.x,tl[0],k);camNow.l.y=lerp(camNow.l.y,tl[1],k);camNow.l.z=lerp(camNow.l.z,tl[2],k);camNow.fov=lerp(camNow.fov,tf,k);
@@ -840,6 +846,7 @@ function showContact(ev){
   const b=ev.ball;V.contact=ev;V.contactT0=performance.now();V.bc={type:'path',start:V.contactT0,ball:b,cut:null,hold:null,throws:[],cont:true};
   V.mode='ball';camFollowBall=true;if(V.batter&&V.batter.fade)V.batter.fade(1);camMode='high';if(V.catcher)V.catcher.root.visible=true;
   sfx('crack');if(ev.kind==='inplay'&&ev.ev>115)shakeCam(.3);
+  if(b.land&&!b.hr)tw(.01,()=>{},()=>dust(b.land.x,b.land.v,3,.7),b.land.t);
   // 打者が走り出す(インプレー時のみ)
   if(ev.kind==='inplay'){const B=V.batter;if(B){B.setPose('READY');}}
   if(V.pitcher)V.pitcher.setPose('READY');
@@ -868,31 +875,63 @@ function actorForRunner(id,design,startBase){
   if(!a){a=makeActor(design,'RUNNER',null,{id:id});const bp=BASEP[startBase%4];a.place(bp.x,bp.v,0);V.runners.set(id,a);}
   return a;
 }
+/* ---------- 砂ぼこり ---------- */
+const dustGeo=new THREE.SphereGeometry(.28,8,6);
+function dust(x,v,n=6,s=1){
+  for(let i=0;i<n;i++){const m=new THREE.Mesh(dustGeo,new THREE.MeshBasicMaterial({color:0xcdb594,transparent:true,opacity:.55,depthWrite:false}));
+    const ox=(Math.random()-.5)*1.4*s,oz=(Math.random()-.5)*1.4*s;m.position.set(x+ox,.15,sceneZ(v)+oz);scene.add(m);
+    const vx=ox*.6,vz=oz*.6,sc0=.5+Math.random()*.5;
+    tw(.55+Math.random()*.3,k=>{m.position.set(x+ox+vx*k,.15+k*.9*s,sceneZ(v)+oz+vz*k);m.scale.setScalar(sc0*s*(1+k*2.2));m.material.opacity=.55*(1-k);},()=>{scene.remove(m);m.material.dispose();},Math.random()*.08);}
+}
+function nearestFielder(x,v,excl){let best=null,bd=1e9;for(const k in V.fielders){const a=V.fielders[k];if(a===excl)continue;const dd=hy(a.x-x,a.v-v);if(dd<bd){bd=dd;best=a;}}return best;}
 function showPlay(ev){
   const plan=ev.plan;const el=V.bc&&V.bc.type==='path'?(performance.now()-V.bc.start)/1000:0;
   const od=V.teams[V.off].design;
-  V.mode='play';if(!V.bc||V.bc.type!=='path'){camFollowBall=false;setCamMode('high');}
-  // 打者→走者
+  V.mode='play';camMode='high';camFollowBall=true;
   const batId=plan.moves.find(m=>m.legs&&m.legs[0].from===0);
   if(batId&&V.batter){V.batter.root.visible=false;}
-  // 野手の動き
-  const f=plan.field||plan.catch;
-  if(f&&V.fielders[f.pos]){const fa=V.fielders[f.pos];const dur=Math.max(.2,f.t-el);moveActor(fa,f.x,f.v,dur,0,true,true);
-    fa.setPose('ACTION');
+  // 野手: 打球へ走る → 捕球(ダイブ/かがむ) → 送球
+  const f=plan.field||plan.catch;let primary=null;
+  if(f&&V.fielders[f.pos]){const fa=primary=V.fielders[f.pos];const dur=Math.max(.2,f.t-el);const dist=hy(f.x-fa.x,f.v-fa.v);
+    moveActor(fa,f.x,f.v,dur,0,true,true);
+    const stage=plan.catch?(dist>11?'dive':'catch'):'ground';
+    tw(.75,k=>{
+      if(stage==='dive'){const a=k<.25?ease(k/.25):k<.6?1:1-ease((k-.6)/.4);fa.root.rotation.x=1.3*a;fa.root.position.y=.25*a;}
+      else if(stage==='ground'){const a=k<.3?ease(k/.3):k<.7?1:1-ease((k-.7)/.3);fa.root.rotation.x=.55*a;}
+      else{const a=k<.3?ease(k/.3):1-ease((k-.3)/.7);fa.root.rotation.x=-.12*a;}
+      fa.setPose(k>.2?'ACTION':'READY');},()=>{fa.root.rotation.x=0;fa.root.position.y=0;},Math.max(0,f.t-el-.2));
+    if(stage==='dive')tw(.01,()=>{},()=>dust(f.x,f.v,5,1),Math.max(0,f.t-el+.05));
     if(V.bc&&V.bc.type==='path'){V.bc.cut=f.t;V.bc.holdPos={x:f.x,v:f.v};V.bc.holdT=f.t;if(plan.catch){V.bc.hold=null;}}
     if(plan.catch){tw(.1,()=>{},()=>{sfx('catch');banner('キャッチ!','#fff',true);},Math.max(0,f.t-el));}
   }
-  // 送球
+  // 送球: 投げる野手 / 受ける野手(ベースカバー)
+  plan.throws.forEach(t=>{
+    const th=(primary&&hy(primary.x-t.from.x,primary.v-t.from.v)<6)?primary:nearestFielder(t.from.x,t.from.v);
+    const rc=nearestFielder(t.to.x,t.to.v,th);
+    const d0=Math.max(0,t.t0-el);
+    if(th)tw(.45,k=>{th.face(t.to.x,t.to.v);th.setPose(k>.35?'ACTION':'READY');th.root.rotation.x=k<.35?-.18*ease(k/.35):-.18+.36*ease((k-.35)/.65)*(1-k);},()=>{th.root.rotation.x=0;},d0);
+    if(rc&&rc!==th&&hy(rc.x-t.to.x,rc.v-t.to.v)>1.3){
+      const fx=t.to.x+(rc.x-t.to.x)*.1,fv=t.to.v+(rc.v-t.to.v)*.1;
+      moveActor(rc,fx,fv-(t.to.v>20?0:-0),Math.max(.35,t.t1-el-.1),0,true,true);}
+    if(rc)tw(.5,k=>{rc.face(t.from.x,t.from.v);rc.setPose(k>.2?'ACTION':'READY');rc.root.rotation.x=-.1*Math.sin(k*3.14);},()=>{rc.root.rotation.x=0;},Math.max(0,t.t1-el-.2));
+  });
   if(V.bc&&V.bc.type==='path'&&plan.throws.length){V.bc.throws=plan.throws.map(t=>({t0:t.t0,t1:t.t1,from:t.from,to:t.to}));}
-  else if(plan.throws.length){ // 盗塁など(ボール軌道なし)
+  else if(plan.throws.length){
     let tt0=performance.now();V.bc={type:'path',start:tt0,ball:{path:[{t:0,x:0,y:1,v:0},{t:.01,x:0,y:1,v:0}],landT:0,apex:0},cut:0,hold:{x:0,v:0},holdT:0,throws:plan.throws.map(t=>({t0:t.t0,t1:t.t1,from:t.from,to:t.to})),holdPos:{x:0,v:0}};V.bc.holdT=0;}
-  // 走者
+  // 走者: 全力疾走 + スライディング
   for(const m of plan.moves){
     const a=actorForRunner(m.card,od,m.legs[0].from);
     for(const lg of m.legs){const p0=BASEP[lg.from%4],p1=BASEP[lg.to%4];const dur=Math.max(.05,lg.t1-lg.t0);const delay=Math.max(0,lg.t0-el);
-      tw(dur,k=>{a.place(lerp(p0.x,p1.x,k),lerp(p0.v,p1.v,k));a.face(p1.x,p1.v);a.root.position.y=Math.abs(Math.sin(k*dur*9))*.12;a.root.rotation.z=Math.sin(k*dur*9)*.05;a.root.rotation.x=.2;},()=>{a.root.position.y=0;a.root.rotation.z=0;a.root.rotation.x=0;
-        if(lg.out){tw(.5,kk=>{a.root.scale.setScalar(1-kk*.0);a.root.position.y=0;},()=>{killActor(a);V.runners.delete(m.card);},.35);}
-        else if(lg.to>=4){tw(.4,()=>{},()=>{killActor(a);V.runners.delete(m.card);},.2);}},delay);}
+      const slide=lg.to>=2&&(plan.kind==='steal'||lg.out||plan.throws.some(t=>t.base===lg.to&&Math.abs(t.t1-lg.t1)<1.1));
+      const sw=Math.min(.6,dur*.55);
+      tw(dur,k=>{const tt=k*dur,ph=tt*11;a.place(lerp(p0.x,p1.x,k),lerp(p0.v,p1.v,k));a.face(p1.x,p1.v);
+        const sl=slide?clamp((tt-(dur-sw))/(sw*.35),0,1):0;
+        if(sl>0){a.root.rotation.x=-1.32*ease(sl);a.root.position.y=0;a.root.rotation.z=0;}
+        else{a.root.position.y=Math.abs(Math.sin(ph))*.14;a.root.rotation.z=Math.sin(ph)*.07;a.root.rotation.x=.24;a.root.rotation.y=a.yaw+Math.sin(ph)*.12;}},
+        ()=>{a.root.position.y=0;a.root.rotation.z=0;a.root.rotation.y=a.yaw;
+          if(slide){dust(p1.x,p1.v,7,1.2);sfx('catch');tw(.3,kk=>{a.root.rotation.x=-1.32*(1-ease(kk));},()=>{a.root.rotation.x=0;},.45);}else a.root.rotation.x=0;
+          if(lg.out){tw(.5,()=>{},()=>{killActor(a);V.runners.delete(m.card);},slide?.95:.35);}
+          else if(lg.to>=4){tw(.4,()=>{},()=>{killActor(a);V.runners.delete(m.card);},slide?.9:.2);}},delay);}
   }
   V.playEnd=performance.now()+plan.dur*1000;
 }
@@ -918,11 +957,11 @@ const UI={cursor:{u:0,w:0},meetR:.6,aim:{u:0,w:0,set:false},pitchSel:'str',power
 function drawOverlay(){
   const dpr=1;if(zcv.width!==innerWidth||zcv.height!==innerHeight){zcv.width=innerWidth;zcv.height=innerHeight;}
   zctx.clearRect(0,0,zcv.width,zcv.height);
-  if(UI.mode==='bat'){
+  if(UI.mode==='bat'&&camMode==='bat'){
     const r=zoneRectBat();zr=r;
     zctx.strokeStyle='#ffffffcc';zctx.lineWidth=2;zctx.strokeRect(r.x,r.y,r.w,r.h);
     zctx.strokeStyle='#ffffff55';zctx.lineWidth=1;for(let i=1;i<3;i++){zctx.beginPath();zctx.moveTo(r.x+r.w*i/3,r.y);zctx.lineTo(r.x+r.w*i/3,r.y+r.h);zctx.moveTo(r.x,r.y+r.h*i/3);zctx.lineTo(r.x+r.w,r.y+r.h*i/3);zctx.stroke();}
-    const c=zoneToScreen(UI.cursor.u,UI.cursor.w);const rx=UI.meetR*r.w/2,ry=UI.meetR*r.h/2*1.0;
+    const c=zoneToScreen(UI.cursor.u,UI.cursor.w);const rx=Math.abs(UI.meetR*r.w/2),ry=Math.abs(UI.meetR*r.h/2);
     zctx.strokeStyle=UI.power?'#ff5a3a':'#4de0ff';zctx.lineWidth=3;zctx.beginPath();zctx.ellipse(c.x,c.y,rx,ry,0,0,6.283);zctx.stroke();
     zctx.fillStyle=(UI.power?'#ff5a3a':'#4de0ff')+'33';zctx.fill();
     zctx.strokeStyle='#fff';zctx.lineWidth=1.5;zctx.beginPath();zctx.moveTo(c.x-6,c.y);zctx.lineTo(c.x+6,c.y);zctx.moveTo(c.x,c.y-6);zctx.lineTo(c.x,c.y+6);zctx.stroke();
